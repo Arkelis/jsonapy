@@ -1,0 +1,8 @@
+# poetry builds
+dist
+
+# python cache
+__pycache__
+
+# pycharm
+.idea
