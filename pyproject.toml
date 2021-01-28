@@ -3,6 +3,10 @@ name = "jsonapy"
 version = "0.1.0"
 description = "Library for dumping models into JSON:API"
 authors = ["Guillaume Fayard <guillaume.fayard@pycolore.fr>"]
+license = "MIT"
+readme = "README.rst"
+repository = "https://github.com/Arkelis/jsonapy"
+
 
 [tool.poetry.dependencies]
 python = "^3.8"
