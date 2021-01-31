@@ -42,6 +42,6 @@ The resulting `data` dictionary can be represented by:
 }
 ```
 
-## [Documenation](https://arkelis.github.io/jsonapy/jsonapy.html)
+## [Documentation](https://arkelis.github.io/jsonapy/jsonapy.html)
 
 The complete documentation can be found **[here](https://arkelis.github.io/jsonapy/jsonapy.html)**.

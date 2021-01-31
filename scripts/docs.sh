@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+
+echo Removing current docs folder...
+rm -rf docs;
+echo Building new docs...
+poetry run pdoc -o docs jsonapy;
+echo Adding .nojekyll file...
+touch docs/.nojekyll;
+echo Done.

@@ -9,7 +9,9 @@
 `jsonapy` is a Python library for dumping models into
 [JSON:API-compliant](https://jsonapi.org/) JSON.
 
-The source code of this library is hosted on [GitHub](https://github.com/Arkelis/jsonapy).
+This library is provided under the [MIT License](https://pycolore.mit-license.org),
+its source is hosted on [GitHub](https://github.com/Arkelis/jsonapy).
+
 
 ## Basics
 
@@ -40,7 +42,7 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
  'attributes': {'firstName': 'Guido', 'lastName': 'Van Rossum'}}
 ```
 
-You can alos specify the attributes that you want to dump in the dictionary.
+You can also specify the attributes that you want to dump in the dictionary.
 
 ```pycon
 >>> guido.jsonapi_dict(required_attributes=["first_name"])
@@ -49,7 +51,7 @@ You can alos specify the attributes that you want to dump in the dictionary.
  'attributes': {'firstName': 'Guido'}}
 ```
 
-Instead of a dictionary, the `jsonapy.base_resource.BaseResource.dump` method allows you to get a JSON string:
+Instead of a dictionary, the `dump()` method allows you to get a JSON string:
 
 ```pycon
 >>> guido.dump(required_attributes=["first_name"])
@@ -124,9 +126,9 @@ You can specify the links when dumping an instance:
 }
 ```
 
-## Advanced mechanism
+## Complete reference
 
-For a more complete reference, go to `jsonapy.base` module.
+For a more complete reference about resources, go to `jsonapy.base` module.
 
 """
 

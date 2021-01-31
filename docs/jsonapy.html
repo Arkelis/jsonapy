@@ -16,7 +16,7 @@
             <label for="navtoggle" class="button"></label>
             <input id="navtoggle" type="checkbox">
             <div>
-                        <a class="button module-list-button" href="./index.html">
+                        <a class="button module-list-button" href="./">
                             Module Index
                         </a>
 
@@ -27,7 +27,7 @@
     <li><a href="#basics">Basics</a></li>
     <li><a href="#relationships">Relationships</a></li>
     <li><a href="#links">Links</a></li>
-    <li><a href="#advanced-mechanism">Advanced mechanism</a></li>
+    <li><a href="#complete-reference">Complete reference</a></li>
   </ul></li>
 </ul>
 
@@ -56,7 +56,8 @@ jsonapy                </h1>
 <p><code><a href="">jsonapy</a></code> is a Python library for dumping models into
 <a href="https://jsonapi.org/">JSON:API-compliant</a> JSON.</p>
 
-<p>The source code of this library is hosted on <a href="https://github.com/Arkelis/jsonapy">GitHub</a>.</p>
+<p>This library is provided under the <a href="https://pycolore.mit-license.org">MIT License</a>,
+its source is hosted on <a href="https://github.com/Arkelis/jsonapy">GitHub</a>.</p>
 
 <h2 id="basics">Basics</h2>
 
@@ -85,7 +86,7 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 <span class="go"> &#39;attributes&#39;: {&#39;firstName&#39;: &#39;Guido&#39;, &#39;lastName&#39;: &#39;Van Rossum&#39;}}</span>
 </code></pre></div>
 
-<p>You can alos specify the attributes that you want to dump in the dictionary.</p>
+<p>You can also specify the attributes that you want to dump in the dictionary.</p>
 
 <div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">guido</span><span class="o">.</span><span class="n">jsonapi_dict</span><span class="p">(</span><span class="n">required_attributes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;first_name&quot;</span><span class="p">])</span>
 <span class="go">{&#39;type&#39;: &#39;person&#39;,</span>
@@ -93,7 +94,7 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 <span class="go"> &#39;attributes&#39;: {&#39;firstName&#39;: &#39;Guido&#39;}}</span>
 </code></pre></div>
 
-<p>Instead of a dictionary, the <code><a href="#base_resource.BaseResource.dump">jsonapy.base_resource.BaseResource.dump</a></code> method allows you to get a JSON string:</p>
+<p>Instead of a dictionary, the <code>dump()</code> method allows you to get a JSON string:</p>
 
 <div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">guido</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">required_attributes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;first_name&quot;</span><span class="p">])</span>
 <span class="go">&#39;{&quot;type&quot;: &quot;person&quot;, &quot;id&quot;: 1, &quot;attributes&quot;: {&quot;firstName&quot;: &quot;Guido&quot;, &quot;lastName&quot;: &quot;Van Rossum&quot;}}&#39;</span>
@@ -164,9 +165,9 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 <span class="go">}</span>
 </code></pre></div>
 
-<h2 id="advanced-mechanism">Advanced mechanism</h2>
+<h2 id="complete-reference">Complete reference</h2>
 
-<p>For a more complete reference, go to <code><a href="jsonapy/base.html">jsonapy.base</a></code> module.</p>
+<p>For a more complete reference about resources, go to <code><a href="jsonapy/base.html">jsonapy.base</a></code> module.</p>
 </div>
 
                             <details>
@@ -182,7 +183,9 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 <span class="sd">`jsonapy` is a Python library for dumping models into</span>
 <span class="sd">[JSON:API-compliant](https://jsonapi.org/) JSON.</span>
 
-<span class="sd">The source code of this library is hosted on [GitHub](https://github.com/Arkelis/jsonapy).</span>
+<span class="sd">This library is provided under the [MIT License](https://pycolore.mit-license.org),</span>
+<span class="sd">its source is hosted on [GitHub](https://github.com/Arkelis/jsonapy).</span>
+
 
 <span class="sd">## Basics</span>
 
@@ -213,7 +216,7 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 <span class="sd"> &#39;attributes&#39;: {&#39;firstName&#39;: &#39;Guido&#39;, &#39;lastName&#39;: &#39;Van Rossum&#39;}}</span>
 <span class="sd">```</span>
 
-<span class="sd">You can alos specify the attributes that you want to dump in the dictionary.</span>
+<span class="sd">You can also specify the attributes that you want to dump in the dictionary.</span>
 
 <span class="sd">```pycon</span>
 <span class="sd">&gt;&gt;&gt; guido.jsonapi_dict(required_attributes=[&quot;first_name&quot;])</span>
@@ -222,7 +225,7 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 <span class="sd"> &#39;attributes&#39;: {&#39;firstName&#39;: &#39;Guido&#39;}}</span>
 <span class="sd">```</span>
 
-<span class="sd">Instead of a dictionary, the `jsonapy.base_resource.BaseResource.dump` method allows you to get a JSON string:</span>
+<span class="sd">Instead of a dictionary, the `dump()` method allows you to get a JSON string:</span>
 
 <span class="sd">```pycon</span>
 <span class="sd">&gt;&gt;&gt; guido.dump(required_attributes=[&quot;first_name&quot;])</span>
@@ -297,9 +300,9 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 <span class="sd">}</span>
 <span class="sd">```</span>
 
-<span class="sd">## Advanced mechanism</span>
+<span class="sd">## Complete reference</span>
 
-<span class="sd">For a more complete reference, go to `jsonapy.base` module.</span>
+<span class="sd">For a more complete reference about resources, go to `jsonapy.base` module.</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 
