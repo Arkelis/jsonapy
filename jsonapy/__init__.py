@@ -9,6 +9,8 @@
 `jsonapy` is a Python library for dumping models into
 [JSON:API-compliant](https://jsonapi.org/) JSON.
 
+The source code of this library is hosted on [GitHub](https://github.com/Arkelis/jsonapy).
+
 ## Basics
 
 This package lets you define models and dump them into dict with the JSON:API
