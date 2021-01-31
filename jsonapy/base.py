@@ -1,3 +1,94 @@
+# Copyright (c) 2021 Guillaume Fayard
+# This library is licensed under the MIT license
+# For a complete copy of the license, see https://pycolore.mit-license.org/
+
+"""# Complete reference of resource creation
+
+## Attributes
+
+You can define the attributes to export with annotations:
+
+```python
+class MyResource(BaseResource):
+   id: int
+   attr1: str
+   attr2: bool
+```
+
+An attribute cannot be named after reserved names that are:
+- the already-defined members of the `BaseResource` class;
+- `"type"`, reserved identifier object member. By default, the type name of
+ the resource is the name of the class. You can override it by specifying
+ the meta resource_name attribute
+
+```python
+class NamedResource(BaseResource):
+   id: int
+
+   class Meta:
+        resource_name = "my resource name"
+```
+
+## Abstract resource and inheritance
+
+A resource must export an `"id"` member, unless it is an abstract resource.
+An abstract resource can be inherited to create concrete resources, we indicate
+that a resource is abstract with the `Meta` innerclass:
+
+```python
+class AbstractResource(BaseResource):
+    attr: str
+
+    class Meta:
+        is_abstract = True
+```
+
+A concrete resource definition without `"id"` member will raise an `AttributeError`.
+When a resource subclasses another resource, all attributes are copied to the sub-resource.
+
+## The `Meta` inner class
+
+This inner class allows you to define several metadata
+
+- `is_abstract`: a boolean indicating the model is aimed to be instantiated.
+- `resource_name`: the resource type name
+- `identifier_meta_fields`: a set containing extra non standard fields that
+  contain extra meta-information.
+
+During runtime, these metadata can be accessed by the special names `__is_abstract__`,
+`__resource_name__` and `__identifier_meta_fields__` directly on the resource class.
+The `Meta` inner class is not accessible during runtime.
+
+## Atomic and relationships fields
+
+When an attribute is a instance of `BaseResource`, it is considered as a relationship field.
+The other attributes are considered as "atomic" (they simply appear in the `"attributes"` object
+in JSON:API).
+
+Some special attributes provide the sets of atomic and relationships fields.
+
+```python
+class AResource(BaseResource):
+    id: int
+
+
+class BResource(BaseResource):
+    id: int
+    name: str
+    related: AResource
+```
+
+```pycon
+>>> BResource.__fields_types__
+{'id': int, 'name': str, 'related': __main__.AResource}
+>>> BResource.__atomic_fields_set__
+{'id', 'name'}
+>>> BResource.__relationships_fields_set__
+{'related'}
+```
+"""
+
+
 import json
 from typing import Iterable
 from typing import Any
@@ -63,6 +154,17 @@ class _BaseResource:
 
 
 class BaseResourceMeta(type):
+    """Metaclass of resource classes.
+
+    This metaclass converts the `Meta` inner class of the defined models into
+    sepcial attributes:
+
+    - `__is_abstract__`: a boolean indicating the model is aimed to be instantiated.
+    - `__resource_name__`: the resource type name
+    - `__identifier_meta_fields__`: a set containing extra non standard fields that
+      contain extra meta-information
+    """
+
     def __new__(mcs, name, bases, namespace):
         try:
             meta = namespace.pop("Meta").__dict__
@@ -82,39 +184,9 @@ class BaseResourceMeta(type):
 
 
 class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
-    """Dump the object as JSON in compliance with JSON:API specification.
+    """Base class for defining resources.
 
-    Parameters
-
-    - `links`: a dictionary containing the links to include in data. For example::
-
-        {
-            "self": request.url_for(...),
-            "related": request.url_for(...),
-        }
-
-    if using FastAPI / Starlette.
-
-    - `required_attributes`: a iterable containing the fields names to include in dumped data. If all fields are
-    required, provide the `"__all__"` literal instead of an iterable.
-
-    - `relationships`: a dictionary specifying the relationships to include and their fields and links.
-    The keys must be a attribute of the resource referencing another resource. The value is another dict containing
-    two keys:
-
-        + `fields`: a list containing the fields to dump (see required_attributes above)
-
-        + `links`: a dict containing the links to dump (see links parameter above)
-
-    For example, let's say an article is related to an author. The relationships dict could be::
-
-        {
-            "author": {
-                "field": ["id", "name"]
-                "links": {"self": request.url_for(...), ...}
-            }
-        }
-
+    See the top of the `jsonapy.base` module for overview documentation.
     """
 
     class Meta:
@@ -123,6 +195,12 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
         identifier_meta_fields: Set[str]
 
     def __init__(self, **kwargs):
+        """Automatically set all passed arguments.
+
+        Take keyword arguments only and raise a `ValueError` if a parameter
+        tries to reassign an already defined member (like the `jsonapi_dict()`
+        method).
+        """
         errors = []
         for name in kwargs:
             if hasattr(self, name) or name in self._forbidden_fields:
@@ -145,26 +223,29 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
 
         Parameters
 
-        - `links`: a dictionary containing the links to include in data. For example::
-            {
-                "self": request.url_for(...),
-                "related": request.url_for(...),
-            }
-        if using FastAPI / Starlette.
         - `required_attributes`: a iterable containing the fields names to include in dumped data. If all fields are
         required, provide the `"__all__"` literal instead of an iterable.
+        - `links`: a dictionary containing the links to include in data. For example:
+        ```python
+        {"self": request.url_for(...), "related": request.url_for(...)}
+        ```
+        if using [FastAPI](https://fastapi.tiangolo.com/) or
+        [Starlette](https://www.starlette.io).
         - `relationships`: a dictionary specifying the relationships to include and their fields and links.
         The keys must be a attribute of the resource referencing another resource. The value is another dict containing
         two keys:
-            + `data`: a boolean indicating if identifier object must be included
-            + `links`: a dict containing the links to dump (see links parameter above)
-        For example, let's say an article is related to an author. The relationships dict could be::
-            {
-                "author": {
-                    "field": ["id", "name"]
-                    "links": {"self": request.url_for(...), ...}
-                }
+          + `data`: a boolean indicating if an identifier object must be included
+          + `links`: a dict containing the links to dump (see links parameter above)
+
+        For example, let's say an article is related to an author. The relationships dict could be:
+        ```python
+        {
+            "author": {
+                "data": True
+                "links": {"self": request.url_for(...)}
             }
+        }
+        ```
         """
         data = {
             "type": self.__resource_name__,
@@ -181,6 +262,11 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
     def filtered_attributes(
         self, required_attributes: Union[Iterable, Literal["__all__"]]
     ) -> Dict:
+        """Filter the attributes with provided `required_attributes` iterable.
+
+        If a member of the iterable is not in the annotated attributes, raise a
+        `ValueError`. The names are converted from snake case to camel case.
+        """
         if required_attributes == "__all__":
             required_attributes = self.__atomic_fields_set__
         unexpected_attributes = set(required_attributes) - self.__atomic_fields_set__
@@ -199,6 +285,13 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
         }
 
     def validate_relationships(self, relationships: Dict) -> None:
+        """Make sure that the provided `relationships` dictionary is valid
+
+        - The keys must refer an existing relationships field.
+        - The values must contain at least a data or a links member.
+
+        Raise a `ValueError` if the dictionary is not valid.
+        """
         errors = []
         for name, rel_dict in relationships.items():
             if name not in self.__relationships_fields_set__:
@@ -211,6 +304,7 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
             raise ValueError("\n".join(errors))
 
     def formatted_relationships(self, relationships: Dict) -> Dict:
+        """Format relationships into the JSON:API format."""
         relationships_dict = {}
         for name, rel_payload in relationships.items():
             related_object: BaseResource = self.__dict__[name]
@@ -232,6 +326,10 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
         relationships: Optional[Dict] = None,
         dump_function: Callable[[Dict], str] = json.dumps,
     ) -> str:
+        """Call `BaseResource.jsonapi_dict()` method and dump the result with dump_function.
+
+        By default, the used dump function is `json.dumps()`.
+        """
         return dump_function(
             self.jsonapi_dict(required_attributes, links, relationships)
         )
