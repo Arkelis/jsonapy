@@ -1,6 +1,6 @@
 import pytest
 
-from jsonapy.base_resource import BaseResource
+from jsonapy.base import BaseResource
 
 
 def test_normal_resource_definition():

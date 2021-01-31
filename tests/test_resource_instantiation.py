@@ -1,6 +1,6 @@
 import pytest
 
-from jsonapy.base_resource import BaseResource
+from jsonapy.base import BaseResource
 
 
 class AbstractResource(BaseResource):
