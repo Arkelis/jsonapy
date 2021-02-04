@@ -1,11 +1,19 @@
-# JSON:APy - Dumping JSON:API in Python
+# JSON:APy - Loading and Dumping JSON:API in Python
 
 > **WIP:** this library is still in early development phase.
 
 `jsonapy` is a Python library for dumping models into
 [JSON:API-compliant]("https://jsonapi.org/") JSON.
 
-## Basics
+## Installation
+
+With `pip`:
+
+```
+pip install jsonapy
+```
+
+## Basic usage overview
 
 This package lets you define models and dump them into dict with the JSON:API
 structure. First, define a resource:
@@ -45,3 +53,8 @@ The resulting `data` dictionary can be represented by:
 ## [Documentation](https://arkelis.github.io/jsonapy/jsonapy.html)
 
 The complete documentation can be found **[here](https://arkelis.github.io/jsonapy/jsonapy.html)**.
+It is built with [pdoc]("https://github.com/mitmproxy/pdoc").
+
+## [Roadmap](https://github.com/Arkelis/jsonapy/projects/1)
+
+Refer to [the project](https://github.com/Arkelis/jsonapy/projects/1) to view the roadmap-related issues.
