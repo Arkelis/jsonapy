@@ -1,4 +1,5 @@
 import json
+from typing import Callable
 
 import pytest
 
@@ -30,6 +31,24 @@ class RelatedResource(BaseResource):
         resource_name = "related"
 
 
+def link_factory(res_name) -> Callable[[str], str]:
+    def make_link(res_id) -> str:
+        return f"http://example.com/{res_name}/{res_id}"
+    return make_link
+
+
+def rel_link_factory(res_name, rel_name) -> Callable[[str, str], str]:
+    def make_link(res_id) -> str:
+        return f"http://example.com/{res_name}/{res_id}/{rel_name}"
+    return make_link
+
+
+SimpleResource.register_link_factory("self", link_factory(SimpleResource.__resource_name__))
+MoreAttributes.register_link_factory("self", link_factory(MoreAttributes.__resource_name__))
+RelatedResource.register_link_factory("self", link_factory(RelatedResource.__resource_name__))
+RelatedResource.register_link_factory("related_more__related", rel_link_factory(RelatedResource.__resource_name__, "related_more"))
+
+
 @pytest.fixture
 def simple_object() -> SimpleResource:
     return SimpleResource(id=0, name="Simple Name")
@@ -50,24 +69,28 @@ def test_simple_dumping(simple_object: SimpleResource):
         "type": "less",
         "id": 0,
         "attributes": {"name": "Simple Name"},
-        "links": {"self": "http://example.com/simple/0"},
     }
     assert (
         simple_object.jsonapi_dict(
             required_attributes="__all__",
-            links={"self": "http://example.com/simple/0"},
         )
         == expected
     )
 
 
-def test_simple_dumping_without_link(simple_object: SimpleResource):
+def test_simple_dumping_with_link(simple_object: SimpleResource):
     expected = {
         "type": "less",
         "id": 0,
         "attributes": {"name": "Simple Name"},
+        "links": {"self": "http://example.com/less/0"},
     }
-    assert simple_object.jsonapi_dict(required_attributes="__all__") == expected
+    assert (
+        simple_object.jsonapi_dict(
+            required_attributes="__all__",
+            links={"self"},
+        )
+    ) == expected
 
 
 def test_simple_dumping_with_filtered_attrs(more_object: MoreAttributes):
@@ -106,18 +129,19 @@ def test_relationship_with_link_only(related_object: RelatedResource):
         "attributes": {"foo": "bar"},
         "relationships": {
             "related_more": {
-                "links": {"self": "http://example.com/rel/2/more"}
+                "links": {"related": "http://example.com/related/2/related_more"}
             }
         }
     }
+
     assert (
         related_object.jsonapi_dict(
             required_attributes="__all__",
-            relationships={"related_more": {"data": False, "links": {"self": "http://example.com/rel/2/more"}}}
+            relationships={"related_more": {"data": False, "links": {"related"}}}
         )
         == related_object.jsonapi_dict(
             required_attributes="__all__",
-            relationships={"related_more": {"links": {"self": "http://example.com/rel/2/more"}}}
+            relationships={"related_more": {"links": {"related"}}}
         )
         == expected
     )
@@ -130,7 +154,7 @@ def test_relationship_with_nothing(related_object: RelatedResource):
             relationships={"related_more": {"foo": "bar"}}
         )
 
-    assert str(err.value) == f"You must provide at least links or data for the 'related_more' relationship."
+    assert str(err.value) == "\n    You must provide at least links or data for the 'related_more' relationship."
 
 
 def test_relationship_with_data_and_link(related_object: RelatedResource):
@@ -141,14 +165,14 @@ def test_relationship_with_data_and_link(related_object: RelatedResource):
         "relationships": {
             "related_more": {
                 "data": {"type": "more", "id": 1},
-                "links": {"self": "http://example.com/rel/2/more"}
+                "links": {"related": "http://example.com/related/2/related_more"}
             }
         }
     }
     assert (
         related_object.jsonapi_dict(
             required_attributes="__all__",
-            relationships={"related_more": {"data": True, "links": {"self": "http://example.com/rel/2/more"}}}
+            relationships={"related_more": {"data": True, "links": {"related"}}}
         )
         == expected
     )
@@ -162,14 +186,14 @@ def test_str_dump(related_object: RelatedResource):
         "relationships": {
             "related_more": {
                 "data": {"type": "more", "id": 1},
-                "links": {"self": "http://example.com/rel/2/more"}
+                "links": {"related": "http://example.com/related/2/related_more"}
             }
         }
     })
     assert (
         related_object.dump(
             required_attributes="__all__",
-            relationships={"related_more": {"data": True, "links": {"self": "http://example.com/rel/2/more"}}}
+            relationships={"related_more": {"data": True, "links": {"related"}}}
         )
         == expected
     )

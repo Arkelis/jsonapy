@@ -1,6 +1,6 @@
 # Copyright (c) 2021 Guillaume Fayard
 # This library is licensed under the MIT license
-# For a complete copy of the license, see https://pycolore.mit-license.org/
+# For a complete copy of the license, see the LICENSE file.
 
 """# JSON:APy - Dumping JSON:API in Python
 
@@ -90,7 +90,8 @@ When you dump an article, you can specify the relationships you want to dump:
 
 ## Links
 
-You can specify the links when dumping an instance:
+You can specify the links of the resource by registering factory functions
+that will be used to generate them.
 
 ```pycon
 >>> jaccuse.jsonapi_dict(

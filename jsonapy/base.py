@@ -1,6 +1,6 @@
 # Copyright (c) 2021 Guillaume Fayard
 # This library is licensed under the MIT license
-# For a complete copy of the license, see https://pycolore.mit-license.org/
+# For a complete copy of the license, see the LICENSE file.
 
 """# Complete reference of resource creation
 
@@ -26,7 +26,7 @@ class NamedResource(BaseResource):
    id: int
 
    class Meta:
-        resource_name = "my resource name"
+        resource_name = "myResourceName"
 ```
 
 ## Abstract resource and inheritance
@@ -91,16 +91,21 @@ class BResource(BaseResource):
 
 import json
 from typing import Iterable
-from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Literal
 from typing import Optional
 from typing import Set
 from typing import TYPE_CHECKING
+from typing import TypeVar
 from typing import Union
 
 from jsonapy import utils
+
+
+__all__ = ("BaseResource", "BaseResourceMeta")
+
+IdType = TypeVar("IdType")
 
 
 class _BaseResource:
@@ -113,9 +118,10 @@ class _BaseResource:
         __resource_name__: str
         __is_abstract__: bool
         __identifier_meta_fields__: Set[str]
+        __links_factories__: Dict[str, Callable[[IdType], str]]
 
         # must be provided by subclasses
-        id: Any
+        id: IdType
 
     __annotations__ = {}
     _forbidden_fields = {"type", "links", "relationships"}
@@ -152,12 +158,16 @@ class _BaseResource:
             identifier_dict["meta"] = {name: getattr(self, name) for name in self.__identifier_meta_fields__}
         return identifier_dict
 
+    @staticmethod
+    def _qualname(name: str, relationship: Optional[str] = None):
+        return f"{relationship}__{name}" if relationship else name
+
 
 class BaseResourceMeta(type):
     """Metaclass of resource classes.
 
     This metaclass converts the `Meta` inner class of the defined models into
-    sepcial attributes:
+    special attributes:
 
     - `__is_abstract__`: a boolean indicating the model is aimed to be instantiated.
     - `__resource_name__`: the resource type name
@@ -176,6 +186,7 @@ class BaseResourceMeta(type):
         cls.__is_abstract__ = meta.get("is_abstract", False)
         cls.__resource_name__ = meta.get("resource_name", cls.__name__)
         cls.__identifier_meta_fields__ = meta.get("identifier_meta_fields", set())
+        cls.__links_factories__ = {}
 
         if not cls.__is_abstract__ and "id" not in cls.__annotations__:
             raise AttributeError("A Resource must have an 'id' attribute.")
@@ -186,7 +197,9 @@ class BaseResourceMeta(type):
 class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
     """Base class for defining resources.
 
-    See the top of the `jsonapy.base` module for overview documentation.
+    See the top of the `jsonapy.base` module for an overview documentation.
+
+    This class is instantiated by the `BaseResourceMeta` metaclass.
     """
 
     class Meta:
@@ -216,50 +229,45 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
     def jsonapi_dict(
         self,
         required_attributes: Union[Iterable[str], Literal["__all__"]],
-        links: Optional[Dict] = None,
+        links: Optional[Iterable[str]] = None,
         relationships: Optional[Dict] = None,
-    ):
-        """Dump the object as JSON in compliance with JSON:API specification.
+    ) -> Dict:
+        """Export the object as a dictionary in compliance with JSON:API specification.
 
-        Parameters
+        **Parameters**
 
-        - `required_attributes`: a iterable containing the fields names to include in dumped data. If all fields are
-        required, provide the `"__all__"` literal instead of an iterable.
-        - `links`: a dictionary containing the links to include in data. For example:
-        ```python
-        {"self": request.url_for(...), "related": request.url_for(...)}
-        ```
-        if using [FastAPI](https://fastapi.tiangolo.com/) or
-        [Starlette](https://www.starlette.io).
-        - `relationships`: a dictionary specifying the relationships to include and their fields and links.
-        The keys must be a attribute of the resource referencing another resource. The value is another dict containing
-        two keys:
+        - `required_attributes`: a iterable containing the fields names to
+        include in dumped data. If all fields are required, provide the
+        `"__all__"` literal instead of an iterable.
+        - `links`: an iterable of links names to include in data. You must have
+        registered the link names before (see `BaseResource.register_link_factory()`
+        method).
+        - `relationships`: a dictionary specifying the relationships to include
+        and their fields and links. The keys must be a attribute of the resource
+        referencing another resource. The value is another dict containing two
+        keys:
           + `data`: a boolean indicating if an identifier object must be included
-          + `links`: a dict containing the links to dump (see links parameter above)
+          + `links`: an iterable of links names to dump
 
         For example, let's say an article is related to an author. The relationships dict could be:
         ```python
-        {
-            "author": {
-                "data": True
-                "links": {"self": request.url_for(...)}
-            }
-        }
+        {"author": {"data": True, "links": {"self"}}}
         ```
         """
         data = {
             "type": self.__resource_name__,
             "id": self.id,
-            "attributes": self.filtered_attributes(required_attributes),
+            "attributes": self._filtered_attributes(required_attributes),
         }
         if links:
-            data["links"] = links
+            self._validate_links(links)
+            data["links"] = self._make_links(links)
         if relationships:
-            self.validate_relationships(relationships)
-            data["relationships"] = self.formatted_relationships(relationships)
+            self._validate_relationships(relationships)
+            data["relationships"] = self._formatted_relationships(relationships)
         return data
 
-    def filtered_attributes(
+    def _filtered_attributes(
         self, required_attributes: Union[Iterable, Literal["__all__"]]
     ) -> Dict:
         """Filter the attributes with provided `required_attributes` iterable.
@@ -284,7 +292,23 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
             if k in set(required_attributes) - self._identifier_fields
         }
 
-    def validate_relationships(self, relationships: Dict) -> None:
+    def _validate_links(self, links, relationship: Optional[str] = None):
+        if relationship is not None:
+            links = {f"{relationship}__{name}" for name in links}
+        errors = []
+        for name in links:
+            if name not in self.__links_factories__:
+                errors.append(f"    '{name}' is not a registered link name.")
+        if errors:
+            raise ValueError("\n" + "\n".join(errors))
+
+    def _make_links(self, links: Iterable[str], relationship: Optional[str] = None):
+        return {
+            name: self.__links_factories__[self._qualname(name, relationship)](self.id)
+            for name in links
+        }
+
+    def _validate_relationships(self, relationships: Dict) -> None:
         """Make sure that the provided `relationships` dictionary is valid
 
         - The keys must refer an existing relationships field.
@@ -295,15 +319,15 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
         errors = []
         for name, rel_dict in relationships.items():
             if name not in self.__relationships_fields_set__:
-                errors.append(f"'{name}' is not a valid relationship.")
+                errors.append(f"    '{name}' is not a valid relationship.")
             if (rel_dict.get("links") is None and rel_dict.get("data")) is None:
                 errors.append(
-                    f"You must provide at least links or data for the '{name}' relationship."
+                    f"    You must provide at least links or data for the '{name}' relationship."
                 )
         if errors:
-            raise ValueError("\n".join(errors))
+            raise ValueError("\n" + "\n".join(errors))
 
-    def formatted_relationships(self, relationships: Dict) -> Dict:
+    def _formatted_relationships(self, relationships: Dict) -> Dict:
         """Format relationships into the JSON:API format."""
         relationships_dict = {}
         for name, rel_payload in relationships.items():
@@ -314,8 +338,10 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
             rel_data = {}
             if rel_payload.get("data"):
                 rel_data["data"] = related_object._identifier_dict
-            if rel_payload.get("links") is not None:
-                rel_data["links"] = rel_payload["links"]
+            relationships_link = rel_payload.get("links")
+            if relationships_link is not None:
+                self._validate_links(rel_payload["links"], relationship=name)
+                rel_data["links"] = self._make_links(rel_payload["links"], relationship=name)
             relationships_dict[name] = rel_data
         return relationships_dict
 
@@ -326,10 +352,37 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
         relationships: Optional[Dict] = None,
         dump_function: Callable[[Dict], str] = json.dumps,
     ) -> str:
-        """Call `BaseResource.jsonapi_dict()` method and dump the result with dump_function.
+        """Call `jsonapi_dict()` method and dump the result with `dump_function`.
 
         By default, the used dump function is `json.dumps()`.
         """
         return dump_function(
             self.jsonapi_dict(required_attributes, links, relationships)
         )
+
+    @classmethod
+    def register_link_factory(cls, name: str, factory: Callable[[IdType], str]):
+        """Add a link factory to the resource.
+
+        When the resources are dump, these factories are used to produce their
+        links.
+
+        **Parameters**
+
+        - `name`: the name of the link (for example `"self"`)
+        - `factory`: a callable taking the id of the resource as parameter and
+        returning a string representing the url to dump.
+
+        To register a link name of a relationship, prefix the link name with
+        the attribute name and two underscores. For example, if an `"article"`
+        resource has an `"author"` relationship attribute, you can register
+        `"author__self"` or `"author__related"` links.
+
+        If the relationship does not exist, raise a `ValueError`.
+        """
+        split_name = name.split("__")
+        if len(split_name) > 1:
+            relationship_name = split_name[0]
+            if relationship_name not in cls.__relationships_fields_set__:
+                raise ValueError(f"'{relationship_name}' is not a valid relationship for {cls.__name__}.")
+        cls.__links_factories__[name] = factory
