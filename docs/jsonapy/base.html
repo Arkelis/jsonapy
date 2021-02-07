@@ -26,6 +26,7 @@
     <li><a href="#abstract-resource-and-inheritance">Abstract resource and inheritance</a></li>
     <li><a href="#the-meta-inner-class">The <code>Meta</code> inner class</a></li>
     <li><a href="#atomic-and-relationships-fields">Atomic and relationships fields</a></li>
+    <li><a href="#link-registering">Link registering</a></li>
   </ul></li>
 </ul>
 
@@ -33,18 +34,6 @@
 
                     <h2>API Documentation</h2>
                             <ul class="memberlist">
-                <li>
-                        <a class="class" href="#BaseResourceMeta">BaseResourceMeta</a>
-                                    <ul class="memberlist">
-                            <li>
-                                    <a class="function" href="#BaseResourceMeta.__init__">BaseResourceMeta</a>
-                            </li>
-                            <li>
-                                    <a class="function" href="#BaseResourceMeta.mro">mro</a>
-                            </li>
-                    </ul>
-
-                </li>
                 <li>
                         <a class="class" href="#BaseResource">BaseResource</a>
                                     <ul class="memberlist">
@@ -55,16 +44,22 @@
                                     <a class="function" href="#BaseResource.jsonapi_dict">jsonapi_dict</a>
                             </li>
                             <li>
-                                    <a class="function" href="#BaseResource.filtered_attributes">filtered_attributes</a>
-                            </li>
-                            <li>
-                                    <a class="function" href="#BaseResource.validate_relationships">validate_relationships</a>
-                            </li>
-                            <li>
-                                    <a class="function" href="#BaseResource.formatted_relationships">formatted_relationships</a>
-                            </li>
-                            <li>
                                     <a class="function" href="#BaseResource.dump">dump</a>
+                            </li>
+                            <li>
+                                    <a class="function" href="#BaseResource.register_link_factory">register_link_factory</a>
+                            </li>
+                    </ul>
+
+                </li>
+                <li>
+                        <a class="class" href="#BaseResourceMeta">BaseResourceMeta</a>
+                                    <ul class="memberlist">
+                            <li>
+                                    <a class="function" href="#BaseResourceMeta.__init__">BaseResourceMeta</a>
+                            </li>
+                            <li>
+                                    <a class="function" href="#BaseResourceMeta.mro">mro</a>
                             </li>
                     </ul>
 
@@ -105,7 +100,7 @@ the meta resource_name attribute</li>
    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
 
    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
-        <span class="n">resource_name</span> <span class="o">=</span> <span class="s2">&quot;my resource name&quot;</span>
+        <span class="n">resource_name</span> <span class="o">=</span> <span class="s2">&quot;myResourceName&quot;</span>
 </code></pre></div>
 
 <h2 id="abstract-resource-and-inheritance">Abstract resource and inheritance</h2>
@@ -164,13 +159,32 @@ in JSON:API).</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">BResource</span><span class="o">.</span><span class="n">__relationships_fields_set__</span>
 <span class="go">{&#39;related&#39;}</span>
 </code></pre></div>
+
+<h2 id="link-registering">Link registering</h2>
+
+<p>To integrate the endpoints of your API in the resources, you can register links
+factories function that will be used to produce resource's links.</p>
+
+<div class="codehilite"><pre><span></span><code><span class="n">BResource</span><span class="o">.</span><span class="n">register_link_factory</span><span class="p">(</span><span class="s2">&quot;self&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;/bresource/</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>For the relationships links, prefix the links names with the relationship name:</p>
+
+<div class="codehilite"><pre><span></span><code><span class="n">BResource</span><span class="o">.</span><span class="n">register_link_factory</span><span class="p">(</span>
+    <span class="s2">&quot;related__self&quot;</span><span class="p">,</span>
+    <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;/bresource/</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">/relationships/related&quot;</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p>The links factories can be accessed by the <code>__links_factories__</code> special
+attribute. See <code><a href="#BaseResource.register_link_factory">BaseResource.register_link_factory</a></code>.</p>
 </div>
 
                             <details>
                 <summary class="button">View Source</summary>
                 <div class="codehilite"><pre><span></span><span class="c1"># Copyright (c) 2021 Guillaume Fayard</span>
 <span class="c1"># This library is licensed under the MIT license</span>
-<span class="c1"># For a complete copy of the license, see https://pycolore.mit-license.org/</span>
+<span class="c1"># For a complete copy of the license, see the LICENSE file.</span>
 
 <span class="sd">&quot;&quot;&quot;# Complete reference of resource creation</span>
 
@@ -196,7 +210,7 @@ in JSON:API).</p>
 <span class="sd">   id: int</span>
 
 <span class="sd">   class Meta:</span>
-<span class="sd">        resource_name = &quot;my resource name&quot;</span>
+<span class="sd">        resource_name = &quot;myResourceName&quot;</span>
 <span class="sd">```</span>
 
 <span class="sd">## Abstract resource and inheritance</span>
@@ -256,21 +270,47 @@ in JSON:API).</p>
 <span class="sd">&gt;&gt;&gt; BResource.__relationships_fields_set__</span>
 <span class="sd">{&#39;related&#39;}</span>
 <span class="sd">```</span>
+
+<span class="sd">## Link registering</span>
+
+<span class="sd">To integrate the endpoints of your API in the resources, you can register links</span>
+<span class="sd">factories function that will be used to produce resource&#39;s links.</span>
+
+<span class="sd">```python</span>
+<span class="sd">BResource.register_link_factory(&quot;self&quot;, lambda x: f&quot;/bresource/{x}&quot;)</span>
+<span class="sd">```</span>
+
+<span class="sd">For the relationships links, prefix the links names with the relationship name:</span>
+
+<span class="sd">```python</span>
+<span class="sd">BResource.register_link_factory(</span>
+<span class="sd">    &quot;related__self&quot;,</span>
+<span class="sd">    lambda x: f&quot;/bresource/{x}/relationships/related&quot;</span>
+<span class="sd">)</span>
+<span class="sd">```</span>
+
+<span class="sd">The links factories can be accessed by the `__links_factories__` special</span>
+<span class="sd">attribute. See `BaseResource.register_link_factory`.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Literal</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Set</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TypeVar</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span>
 
 <span class="kn">from</span> <span class="nn">jsonapy</span> <span class="kn">import</span> <span class="n">utils</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;BaseResource&quot;</span><span class="p">,</span> <span class="s2">&quot;BaseResourceMeta&quot;</span><span class="p">)</span>
+
+<span class="n">IdType</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;IdType&quot;</span><span class="p">)</span>
 
 
 <span class="k">class</span> <span class="nc">_BaseResource</span><span class="p">:</span>
@@ -283,9 +323,10 @@ in JSON:API).</p>
         <span class="n">__resource_name__</span><span class="p">:</span> <span class="nb">str</span>
         <span class="n">__is_abstract__</span><span class="p">:</span> <span class="nb">bool</span>
         <span class="n">__identifier_meta_fields__</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+        <span class="n">__links_factories__</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IdType</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span>
 
         <span class="c1"># must be provided by subclasses</span>
-        <span class="nb">id</span><span class="p">:</span> <span class="n">Any</span>
+        <span class="nb">id</span><span class="p">:</span> <span class="n">IdType</span>
 
     <span class="vm">__annotations__</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">_forbidden_fields</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;links&quot;</span><span class="p">,</span> <span class="s2">&quot;relationships&quot;</span><span class="p">}</span>
@@ -322,17 +363,24 @@ in JSON:API).</p>
             <span class="n">identifier_dict</span><span class="p">[</span><span class="s2">&quot;meta&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__identifier_meta_fields__</span><span class="p">}</span>
         <span class="k">return</span> <span class="n">identifier_dict</span>
 
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_qualname</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">relationship</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">relationship</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">relationship</span> <span class="k">else</span> <span class="n">name</span>
+
 
 <span class="k">class</span> <span class="nc">BaseResourceMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Metaclass of resource classes.</span>
 
 <span class="sd">    This metaclass converts the `Meta` inner class of the defined models into</span>
-<span class="sd">    sepcial attributes:</span>
+<span class="sd">    special attributes:</span>
 
 <span class="sd">    - `__is_abstract__`: a boolean indicating the model is aimed to be instantiated.</span>
 <span class="sd">    - `__resource_name__`: the resource type name</span>
 <span class="sd">    - `__identifier_meta_fields__`: a set containing extra non standard fields that</span>
 <span class="sd">      contain extra meta-information</span>
+
+<span class="sd">    Moreover, it initialize an empty `__links_factories__` dictionary. It will contain</span>
+<span class="sd">    the links names as keys and their factory functions as values.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="n">mcs</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">namespace</span><span class="p">):</span>
@@ -346,6 +394,7 @@ in JSON:API).</p>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__is_abstract__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;is_abstract&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__resource_name__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;resource_name&quot;</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__identifier_meta_fields__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;identifier_meta_fields&quot;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">__links_factories__</span> <span class="o">=</span> <span class="p">{}</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__is_abstract__</span> <span class="ow">and</span> <span class="s2">&quot;id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__annotations__</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;A Resource must have an &#39;id&#39; attribute.&quot;</span><span class="p">)</span>
@@ -356,7 +405,9 @@ in JSON:API).</p>
 <span class="k">class</span> <span class="nc">BaseResource</span><span class="p">(</span><span class="n">_BaseResource</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">BaseResourceMeta</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Base class for defining resources.</span>
 
-<span class="sd">    See the top of the `jsonapy.base` module for overview documentation.</span>
+<span class="sd">    See the top of the `jsonapy.base` module for an overview documentation.</span>
+
+<span class="sd">    This class is instantiated by the `BaseResourceMeta` metaclass.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
@@ -386,50 +437,45 @@ in JSON:API).</p>
     <span class="k">def</span> <span class="nf">jsonapi_dict</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">required_attributes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;__all__&quot;</span><span class="p">]],</span>
-        <span class="n">links</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">links</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">relationships</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Dump the object as JSON in compliance with JSON:API specification.</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Export the object as a dictionary in compliance with JSON:API specification.</span>
 
-<span class="sd">        Parameters</span>
+<span class="sd">        **Parameters**</span>
 
-<span class="sd">        - `required_attributes`: a iterable containing the fields names to include in dumped data. If all fields are</span>
-<span class="sd">        required, provide the `&quot;__all__&quot;` literal instead of an iterable.</span>
-<span class="sd">        - `links`: a dictionary containing the links to include in data. For example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        {&quot;self&quot;: request.url_for(...), &quot;related&quot;: request.url_for(...)}</span>
-<span class="sd">        ```</span>
-<span class="sd">        if using [FastAPI](https://fastapi.tiangolo.com/) or</span>
-<span class="sd">        [Starlette](https://www.starlette.io).</span>
-<span class="sd">        - `relationships`: a dictionary specifying the relationships to include and their fields and links.</span>
-<span class="sd">        The keys must be a attribute of the resource referencing another resource. The value is another dict containing</span>
-<span class="sd">        two keys:</span>
+<span class="sd">        - `required_attributes`: a iterable containing the fields names to</span>
+<span class="sd">        include in dumped data. If all fields are required, provide the</span>
+<span class="sd">        `&quot;__all__&quot;` literal instead of an iterable.</span>
+<span class="sd">        - `links`: an iterable of links names to include in data. You must have</span>
+<span class="sd">        registered the link names before (see `BaseResource.register_link_factory()`</span>
+<span class="sd">        method).</span>
+<span class="sd">        - `relationships`: a dictionary specifying the relationships to include</span>
+<span class="sd">        and their fields and links. The keys must be a attribute of the resource</span>
+<span class="sd">        referencing another resource. The value is another dict containing two</span>
+<span class="sd">        keys:</span>
 <span class="sd">          + `data`: a boolean indicating if an identifier object must be included</span>
-<span class="sd">          + `links`: a dict containing the links to dump (see links parameter above)</span>
+<span class="sd">          + `links`: an iterable of links names to dump</span>
 
 <span class="sd">        For example, let&#39;s say an article is related to an author. The relationships dict could be:</span>
 <span class="sd">        ```python</span>
-<span class="sd">        {</span>
-<span class="sd">            &quot;author&quot;: {</span>
-<span class="sd">                &quot;data&quot;: True</span>
-<span class="sd">                &quot;links&quot;: {&quot;self&quot;: request.url_for(...)}</span>
-<span class="sd">            }</span>
-<span class="sd">        }</span>
+<span class="sd">        {&quot;author&quot;: {&quot;data&quot;: True, &quot;links&quot;: {&quot;self&quot;}}}</span>
 <span class="sd">        ```</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__resource_name__</span><span class="p">,</span>
             <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-            <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">),</span>
+            <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">),</span>
         <span class="p">}</span>
         <span class="k">if</span> <span class="n">links</span><span class="p">:</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">links</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">relationships</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">validate_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;relationships&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatted_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;relationships&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_formatted_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span>
 
-    <span class="k">def</span> <span class="nf">filtered_attributes</span><span class="p">(</span>
+    <span class="k">def</span> <span class="nf">_filtered_attributes</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">required_attributes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Iterable</span><span class="p">,</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;__all__&quot;</span><span class="p">]]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Filter the attributes with provided `required_attributes` iterable.</span>
@@ -454,7 +500,23 @@ in JSON:API).</p>
             <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_identifier_fields</span>
         <span class="p">}</span>
 
-    <span class="k">def</span> <span class="nf">validate_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationships</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_validate_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">links</span><span class="p">,</span> <span class="n">relationship</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">relationship</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">links</span> <span class="o">=</span> <span class="p">{</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">relationship</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">links</span><span class="p">}</span>
+        <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">links</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__links_factories__</span><span class="p">:</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is not a registered link name.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">errors</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_make_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">links</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">relationship</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">name</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__links_factories__</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_qualname</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">relationship</span><span class="p">)](</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">links</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_validate_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationships</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Make sure that the provided `relationships` dictionary is valid</span>
 
 <span class="sd">        - The keys must refer an existing relationships field.</span>
@@ -465,15 +527,15 @@ in JSON:API).</p>
         <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">rel_dict</span> <span class="ow">in</span> <span class="n">relationships</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__relationships_fields_set__</span><span class="p">:</span>
-                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is not a valid relationship.&quot;</span><span class="p">)</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is not a valid relationship.&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span><span class="n">rel_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">rel_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">))</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;You must provide at least links or data for the &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; relationship.&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;    You must provide at least links or data for the &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; relationship.&quot;</span>
                 <span class="p">)</span>
         <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">errors</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">errors</span><span class="p">))</span>
 
-    <span class="k">def</span> <span class="nf">formatted_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationships</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_formatted_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationships</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Format relationships into the JSON:API format.&quot;&quot;&quot;</span>
         <span class="n">relationships_dict</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">rel_payload</span> <span class="ow">in</span> <span class="n">relationships</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -484,8 +546,10 @@ in JSON:API).</p>
             <span class="n">rel_data</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">if</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">):</span>
                 <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">related_object</span><span class="o">.</span><span class="n">_identifier_dict</span>
-            <span class="k">if</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rel_payload</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span>
+            <span class="n">relationships_link</span> <span class="o">=</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">relationships_link</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">rel_payload</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">],</span> <span class="n">relationship</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+                <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">rel_payload</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">],</span> <span class="n">relationship</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
             <span class="n">relationships_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">rel_data</span>
         <span class="k">return</span> <span class="n">relationships_dict</span>
 
@@ -496,96 +560,46 @@ in JSON:API).</p>
         <span class="n">relationships</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">dump_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Dict</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Call `BaseResource.jsonapi_dict()` method and dump the result with dump_function.</span>
+        <span class="sd">&quot;&quot;&quot;Call `jsonapi_dict()` method and dump the result with `dump_function`.</span>
 
 <span class="sd">        By default, the used dump function is `json.dumps()`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">dump_function</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">jsonapi_dict</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">,</span> <span class="n">links</span><span class="p">,</span> <span class="n">relationships</span><span class="p">)</span>
         <span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">register_link_factory</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IdType</span><span class="p">],</span> <span class="nb">str</span><span class="p">]):</span>
+        <span class="sd">&quot;&quot;&quot;Add a link factory to the resource.</span>
+
+<span class="sd">        When the resources are dump, these factories are used to produce their</span>
+<span class="sd">        links. The factories are stored in the `__links_factories__`</span>
+<span class="sd">        dictionary.</span>
+
+<span class="sd">        **Parameters**</span>
+
+<span class="sd">        - `name`: the name of the link (for example `&quot;self&quot;`)</span>
+<span class="sd">        - `factory`: a callable taking the id of the resource as parameter and</span>
+<span class="sd">        returning a string representing the url to dump.</span>
+
+<span class="sd">        To register a link name of a relationship, prefix the link name with</span>
+<span class="sd">        the attribute name and two underscores. For example, if an `&quot;article&quot;`</span>
+<span class="sd">        resource has an `&quot;author&quot;` relationship attribute, you can register</span>
+<span class="sd">        `&quot;author__self&quot;` or `&quot;author__related&quot;` links.</span>
+
+<span class="sd">        If the relationship does not exist, raise a `ValueError`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">split_name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">split_name</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">relationship_name</span> <span class="o">=</span> <span class="n">split_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">relationship_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__relationships_fields_set__</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">relationship_name</span><span class="si">}</span><span class="s2">&#39; is not a valid relationship for </span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">__links_factories__</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">factory</span>
 </pre></div>
 
             </details>
 
             </section>
-                <section id="BaseResourceMeta">
-                                        <div class="attr class">
-            
-            <span class="def">class</span>
-            <span class="name">BaseResourceMeta</span>(<span class="base">builtins.type</span>):
-        </div>
-
-                        <details>
-                <summary class="button">View Source</summary>
-                <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">BaseResourceMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Metaclass of resource classes.</span>
-
-<span class="sd">    This metaclass converts the `Meta` inner class of the defined models into</span>
-<span class="sd">    sepcial attributes:</span>
-
-<span class="sd">    - `__is_abstract__`: a boolean indicating the model is aimed to be instantiated.</span>
-<span class="sd">    - `__resource_name__`: the resource type name</span>
-<span class="sd">    - `__identifier_meta_fields__`: a set containing extra non standard fields that</span>
-<span class="sd">      contain extra meta-information</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="n">mcs</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">namespace</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">meta</span> <span class="o">=</span> <span class="n">namespace</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;Meta&quot;</span><span class="p">)</span><span class="o">.</span><span class="vm">__dict__</span>
-        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-            <span class="n">meta</span> <span class="o">=</span> <span class="p">{}</span>
-
-        <span class="bp">cls</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">mcs</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">namespace</span><span class="p">)</span>
-
-        <span class="bp">cls</span><span class="o">.</span><span class="n">__is_abstract__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;is_abstract&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">__resource_name__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;resource_name&quot;</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">__identifier_meta_fields__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;identifier_meta_fields&quot;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__is_abstract__</span> <span class="ow">and</span> <span class="s2">&quot;id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__annotations__</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;A Resource must have an &#39;id&#39; attribute.&quot;</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="bp">cls</span>
-</pre></div>
-
-            </details>
-
-                    <div class="docstring"><p>Metaclass of resource classes.</p>
-
-<p>This metaclass converts the <code>Meta</code> inner class of the defined models into
-sepcial attributes:</p>
-
-<ul>
-<li><code>__is_abstract__</code>: a boolean indicating the model is aimed to be instantiated.</li>
-<li><code>__resource_name__</code>: the resource type name</li>
-<li><code>__identifier_meta_fields__</code>: a set containing extra non standard fields that
-contain extra meta-information</li>
-</ul>
-</div>
-
-
-                            <div id="BaseResourceMeta.__init__" class="classattr">
-                                            <div class="attr function">
-            
-                <span class="name">BaseResourceMeta</span><span class="signature">(/, *args, **kwargs)</span>        </div>
-
-            
-        
-
-                            </div>
-                            <div id="BaseResourceMeta.mro" class="classattr">
-                                            <div class="attr function">
-            
-                <span class="def">def</span>
-                <span class="name">mro</span><span class="signature">(self, /)</span>:
-        </div>
-
-            
-                    <div class="docstring"><p>Return a type's method resolution order.</p>
-</div>
-
-
-                            </div>
-                </section>
                 <section id="BaseResource">
                                         <div class="attr class">
             
@@ -598,7 +612,9 @@ contain extra meta-information</li>
                 <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">BaseResource</span><span class="p">(</span><span class="n">_BaseResource</span><span class="p">,</span> <span class="n">metaclass</span><span class="o">=</span><span class="n">BaseResourceMeta</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Base class for defining resources.</span>
 
-<span class="sd">    See the top of the `jsonapy.base` module for overview documentation.</span>
+<span class="sd">    See the top of the `jsonapy.base` module for an overview documentation.</span>
+
+<span class="sd">    This class is instantiated by the `BaseResourceMeta` metaclass.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
@@ -628,50 +644,45 @@ contain extra meta-information</li>
     <span class="k">def</span> <span class="nf">jsonapi_dict</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">required_attributes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;__all__&quot;</span><span class="p">]],</span>
-        <span class="n">links</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">links</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">relationships</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Dump the object as JSON in compliance with JSON:API specification.</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Export the object as a dictionary in compliance with JSON:API specification.</span>
 
-<span class="sd">        Parameters</span>
+<span class="sd">        **Parameters**</span>
 
-<span class="sd">        - `required_attributes`: a iterable containing the fields names to include in dumped data. If all fields are</span>
-<span class="sd">        required, provide the `&quot;__all__&quot;` literal instead of an iterable.</span>
-<span class="sd">        - `links`: a dictionary containing the links to include in data. For example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        {&quot;self&quot;: request.url_for(...), &quot;related&quot;: request.url_for(...)}</span>
-<span class="sd">        ```</span>
-<span class="sd">        if using [FastAPI](https://fastapi.tiangolo.com/) or</span>
-<span class="sd">        [Starlette](https://www.starlette.io).</span>
-<span class="sd">        - `relationships`: a dictionary specifying the relationships to include and their fields and links.</span>
-<span class="sd">        The keys must be a attribute of the resource referencing another resource. The value is another dict containing</span>
-<span class="sd">        two keys:</span>
+<span class="sd">        - `required_attributes`: a iterable containing the fields names to</span>
+<span class="sd">        include in dumped data. If all fields are required, provide the</span>
+<span class="sd">        `&quot;__all__&quot;` literal instead of an iterable.</span>
+<span class="sd">        - `links`: an iterable of links names to include in data. You must have</span>
+<span class="sd">        registered the link names before (see `BaseResource.register_link_factory()`</span>
+<span class="sd">        method).</span>
+<span class="sd">        - `relationships`: a dictionary specifying the relationships to include</span>
+<span class="sd">        and their fields and links. The keys must be a attribute of the resource</span>
+<span class="sd">        referencing another resource. The value is another dict containing two</span>
+<span class="sd">        keys:</span>
 <span class="sd">          + `data`: a boolean indicating if an identifier object must be included</span>
-<span class="sd">          + `links`: a dict containing the links to dump (see links parameter above)</span>
+<span class="sd">          + `links`: an iterable of links names to dump</span>
 
 <span class="sd">        For example, let&#39;s say an article is related to an author. The relationships dict could be:</span>
 <span class="sd">        ```python</span>
-<span class="sd">        {</span>
-<span class="sd">            &quot;author&quot;: {</span>
-<span class="sd">                &quot;data&quot;: True</span>
-<span class="sd">                &quot;links&quot;: {&quot;self&quot;: request.url_for(...)}</span>
-<span class="sd">            }</span>
-<span class="sd">        }</span>
+<span class="sd">        {&quot;author&quot;: {&quot;data&quot;: True, &quot;links&quot;: {&quot;self&quot;}}}</span>
 <span class="sd">        ```</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__resource_name__</span><span class="p">,</span>
             <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-            <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">),</span>
+            <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">),</span>
         <span class="p">}</span>
         <span class="k">if</span> <span class="n">links</span><span class="p">:</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">links</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">relationships</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">validate_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;relationships&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatted_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;relationships&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_formatted_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span>
 
-    <span class="k">def</span> <span class="nf">filtered_attributes</span><span class="p">(</span>
+    <span class="k">def</span> <span class="nf">_filtered_attributes</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">required_attributes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Iterable</span><span class="p">,</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;__all__&quot;</span><span class="p">]]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Filter the attributes with provided `required_attributes` iterable.</span>
@@ -696,7 +707,23 @@ contain extra meta-information</li>
             <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_identifier_fields</span>
         <span class="p">}</span>
 
-    <span class="k">def</span> <span class="nf">validate_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationships</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_validate_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">links</span><span class="p">,</span> <span class="n">relationship</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">relationship</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">links</span> <span class="o">=</span> <span class="p">{</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">relationship</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">links</span><span class="p">}</span>
+        <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">links</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__links_factories__</span><span class="p">:</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is not a registered link name.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">errors</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_make_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">links</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">relationship</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">name</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__links_factories__</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_qualname</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">relationship</span><span class="p">)](</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">links</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_validate_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationships</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Make sure that the provided `relationships` dictionary is valid</span>
 
 <span class="sd">        - The keys must refer an existing relationships field.</span>
@@ -707,15 +734,15 @@ contain extra meta-information</li>
         <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">rel_dict</span> <span class="ow">in</span> <span class="n">relationships</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__relationships_fields_set__</span><span class="p">:</span>
-                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is not a valid relationship.&quot;</span><span class="p">)</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is not a valid relationship.&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span><span class="n">rel_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">rel_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">))</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;You must provide at least links or data for the &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; relationship.&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;    You must provide at least links or data for the &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; relationship.&quot;</span>
                 <span class="p">)</span>
         <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">errors</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">errors</span><span class="p">))</span>
 
-    <span class="k">def</span> <span class="nf">formatted_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationships</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_formatted_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationships</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Format relationships into the JSON:API format.&quot;&quot;&quot;</span>
         <span class="n">relationships_dict</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">rel_payload</span> <span class="ow">in</span> <span class="n">relationships</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -726,8 +753,10 @@ contain extra meta-information</li>
             <span class="n">rel_data</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">if</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">):</span>
                 <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">related_object</span><span class="o">.</span><span class="n">_identifier_dict</span>
-            <span class="k">if</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rel_payload</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span>
+            <span class="n">relationships_link</span> <span class="o">=</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">relationships_link</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">rel_payload</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">],</span> <span class="n">relationship</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+                <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">rel_payload</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">],</span> <span class="n">relationship</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
             <span class="n">relationships_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">rel_data</span>
         <span class="k">return</span> <span class="n">relationships_dict</span>
 
@@ -738,20 +767,50 @@ contain extra meta-information</li>
         <span class="n">relationships</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">dump_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Dict</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Call `BaseResource.jsonapi_dict()` method and dump the result with dump_function.</span>
+        <span class="sd">&quot;&quot;&quot;Call `jsonapi_dict()` method and dump the result with `dump_function`.</span>
 
 <span class="sd">        By default, the used dump function is `json.dumps()`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">dump_function</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">jsonapi_dict</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">,</span> <span class="n">links</span><span class="p">,</span> <span class="n">relationships</span><span class="p">)</span>
         <span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">register_link_factory</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IdType</span><span class="p">],</span> <span class="nb">str</span><span class="p">]):</span>
+        <span class="sd">&quot;&quot;&quot;Add a link factory to the resource.</span>
+
+<span class="sd">        When the resources are dump, these factories are used to produce their</span>
+<span class="sd">        links. The factories are stored in the `__links_factories__`</span>
+<span class="sd">        dictionary.</span>
+
+<span class="sd">        **Parameters**</span>
+
+<span class="sd">        - `name`: the name of the link (for example `&quot;self&quot;`)</span>
+<span class="sd">        - `factory`: a callable taking the id of the resource as parameter and</span>
+<span class="sd">        returning a string representing the url to dump.</span>
+
+<span class="sd">        To register a link name of a relationship, prefix the link name with</span>
+<span class="sd">        the attribute name and two underscores. For example, if an `&quot;article&quot;`</span>
+<span class="sd">        resource has an `&quot;author&quot;` relationship attribute, you can register</span>
+<span class="sd">        `&quot;author__self&quot;` or `&quot;author__related&quot;` links.</span>
+
+<span class="sd">        If the relationship does not exist, raise a `ValueError`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">split_name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">split_name</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">relationship_name</span> <span class="o">=</span> <span class="n">split_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">relationship_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__relationships_fields_set__</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">relationship_name</span><span class="si">}</span><span class="s2">&#39; is not a valid relationship for </span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">__links_factories__</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">factory</span>
 </pre></div>
 
             </details>
 
                     <div class="docstring"><p>Base class for defining resources.</p>
 
-<p>See the top of the <code><a href="">jsonapy.base</a></code> module for overview documentation.</p>
+<p>See the top of the <code><a href="">jsonapy.base</a></code> module for an overview documentation.</p>
+
+<p>This class is instantiated by the <code><a href="#BaseResourceMeta">BaseResourceMeta</a></code> metaclass.</p>
 </div>
 
 
@@ -800,9 +859,9 @@ method).</p>
                 <span class="name">jsonapi_dict</span><span class="signature">(
 	self,
 	required_attributes: Union[Iterable[str], Literal[&#39;__all__&#39;]],
-	links: Union[Dict, NoneType] = None,
+	links: Union[Iterable[str], NoneType] = None,
 	relationships: Union[Dict, NoneType] = None
-)</span>:
+) -&gt; Dict</span>:
         </div>
 
                         <details>
@@ -810,211 +869,72 @@ method).</p>
                 <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">jsonapi_dict</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">required_attributes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;__all__&quot;</span><span class="p">]],</span>
-        <span class="n">links</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">links</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">relationships</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Dump the object as JSON in compliance with JSON:API specification.</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Export the object as a dictionary in compliance with JSON:API specification.</span>
 
-<span class="sd">        Parameters</span>
+<span class="sd">        **Parameters**</span>
 
-<span class="sd">        - `required_attributes`: a iterable containing the fields names to include in dumped data. If all fields are</span>
-<span class="sd">        required, provide the `&quot;__all__&quot;` literal instead of an iterable.</span>
-<span class="sd">        - `links`: a dictionary containing the links to include in data. For example:</span>
-<span class="sd">        ```python</span>
-<span class="sd">        {&quot;self&quot;: request.url_for(...), &quot;related&quot;: request.url_for(...)}</span>
-<span class="sd">        ```</span>
-<span class="sd">        if using [FastAPI](https://fastapi.tiangolo.com/) or</span>
-<span class="sd">        [Starlette](https://www.starlette.io).</span>
-<span class="sd">        - `relationships`: a dictionary specifying the relationships to include and their fields and links.</span>
-<span class="sd">        The keys must be a attribute of the resource referencing another resource. The value is another dict containing</span>
-<span class="sd">        two keys:</span>
+<span class="sd">        - `required_attributes`: a iterable containing the fields names to</span>
+<span class="sd">        include in dumped data. If all fields are required, provide the</span>
+<span class="sd">        `&quot;__all__&quot;` literal instead of an iterable.</span>
+<span class="sd">        - `links`: an iterable of links names to include in data. You must have</span>
+<span class="sd">        registered the link names before (see `BaseResource.register_link_factory()`</span>
+<span class="sd">        method).</span>
+<span class="sd">        - `relationships`: a dictionary specifying the relationships to include</span>
+<span class="sd">        and their fields and links. The keys must be a attribute of the resource</span>
+<span class="sd">        referencing another resource. The value is another dict containing two</span>
+<span class="sd">        keys:</span>
 <span class="sd">          + `data`: a boolean indicating if an identifier object must be included</span>
-<span class="sd">          + `links`: a dict containing the links to dump (see links parameter above)</span>
+<span class="sd">          + `links`: an iterable of links names to dump</span>
 
 <span class="sd">        For example, let&#39;s say an article is related to an author. The relationships dict could be:</span>
 <span class="sd">        ```python</span>
-<span class="sd">        {</span>
-<span class="sd">            &quot;author&quot;: {</span>
-<span class="sd">                &quot;data&quot;: True</span>
-<span class="sd">                &quot;links&quot;: {&quot;self&quot;: request.url_for(...)}</span>
-<span class="sd">            }</span>
-<span class="sd">        }</span>
+<span class="sd">        {&quot;author&quot;: {&quot;data&quot;: True, &quot;links&quot;: {&quot;self&quot;}}}</span>
 <span class="sd">        ```</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__resource_name__</span><span class="p">,</span>
             <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-            <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">),</span>
+            <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">),</span>
         <span class="p">}</span>
         <span class="k">if</span> <span class="n">links</span><span class="p">:</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">links</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">relationships</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">validate_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;relationships&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatted_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;relationships&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_formatted_relationships</span><span class="p">(</span><span class="n">relationships</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span>
 </pre></div>
 
             </details>
 
-                    <div class="docstring"><p>Dump the object as JSON in compliance with JSON:API specification.</p>
+                    <div class="docstring"><p>Export the object as a dictionary in compliance with JSON:API specification.</p>
 
-<p>Parameters</p>
-
-<ul>
-<li><code>required_attributes</code>: a iterable containing the fields names to include in dumped data. If all fields are
-required, provide the <code>"__all__"</code> literal instead of an iterable.</li>
-<li><code>links</code>: a dictionary containing the links to include in data. For example:</li>
-</ul>
-
-<div class="codehilite"><pre><span></span><code><span class="p">{</span><span class="s2">&quot;self&quot;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">url_for</span><span class="p">(</span><span class="o">...</span><span class="p">),</span> <span class="s2">&quot;related&quot;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">url_for</span><span class="p">(</span><span class="o">...</span><span class="p">)}</span>
-</code></pre></div>
-
-<p>if using <a href="https://fastapi.tiangolo.com/">FastAPI</a> or
-<a href="https://www.starlette.io">Starlette</a>.</p>
+<p><strong>Parameters</strong></p>
 
 <ul>
-<li><code>relationships</code>: a dictionary specifying the relationships to include and their fields and links.
-The keys must be a attribute of the resource referencing another resource. The value is another dict containing
-two keys:
+<li><code>required_attributes</code>: a iterable containing the fields names to
+include in dumped data. If all fields are required, provide the
+<code>"__all__"</code> literal instead of an iterable.</li>
+<li><code>links</code>: an iterable of links names to include in data. You must have
+registered the link names before (see <code><a href="#BaseResource.register_link_factory">BaseResource.register_link_factory</a>()</code>
+method).</li>
+<li><code>relationships</code>: a dictionary specifying the relationships to include
+and their fields and links. The keys must be a attribute of the resource
+referencing another resource. The value is another dict containing two
+keys:
 <ul>
 <li><code>data</code>: a boolean indicating if an identifier object must be included</li>
-<li><code>links</code>: a dict containing the links to dump (see links parameter above)</li>
+<li><code>links</code>: an iterable of links names to dump</li>
 </ul></li>
 </ul>
 
 <p>For example, let's say an article is related to an author. The relationships dict could be:</p>
 
-<div class="codehilite"><pre><span></span><code><span class="p">{</span>
-    <span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="kc">True</span>
-        <span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;self&quot;</span><span class="p">:</span> <span class="n">request</span><span class="o">.</span><span class="n">url_for</span><span class="p">(</span><span class="o">...</span><span class="p">)}</span>
-    <span class="p">}</span>
-<span class="p">}</span>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span><span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;self&quot;</span><span class="p">}}}</span>
 </code></pre></div>
-</div>
-
-
-                            </div>
-                            <div id="BaseResource.filtered_attributes" class="classattr">
-                                            <div class="attr function">
-            
-                <span class="def">def</span>
-                <span class="name">filtered_attributes</span><span class="signature">(
-	self,
-	required_attributes: Union[Iterable, Literal[&#39;__all__&#39;]]
-) -&gt; Dict</span>:
-        </div>
-
-                        <details>
-                <summary class="button">View Source</summary>
-                <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">filtered_attributes</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">required_attributes</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Iterable</span><span class="p">,</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;__all__&quot;</span><span class="p">]]</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Filter the attributes with provided `required_attributes` iterable.</span>
-
-<span class="sd">        If a member of the iterable is not in the annotated attributes, raise a</span>
-<span class="sd">        `ValueError`. The names are converted from snake case to camel case.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">required_attributes</span> <span class="o">==</span> <span class="s2">&quot;__all__&quot;</span><span class="p">:</span>
-            <span class="n">required_attributes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__atomic_fields_set__</span>
-        <span class="n">unexpected_attributes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__atomic_fields_set__</span>
-        <span class="k">if</span> <span class="n">unexpected_attributes</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Unexpected required attribute: &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
-                    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">unexpected_attributes</span>
-                <span class="p">)</span>
-            <span class="p">)</span>
-        <span class="k">return</span> <span class="p">{</span>
-            <span class="n">utils</span><span class="o">.</span><span class="n">snake_to_camel_case</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span>
-            <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_identifier_fields</span>
-        <span class="p">}</span>
-</pre></div>
-
-            </details>
-
-                    <div class="docstring"><p>Filter the attributes with provided <code>required_attributes</code> iterable.</p>
-
-<p>If a member of the iterable is not in the annotated attributes, raise a
-<code>ValueError</code>. The names are converted from snake case to camel case.</p>
-</div>
-
-
-                            </div>
-                            <div id="BaseResource.validate_relationships" class="classattr">
-                                            <div class="attr function">
-            
-                <span class="def">def</span>
-                <span class="name">validate_relationships</span><span class="signature">(self, relationships: Dict) -&gt; None</span>:
-        </div>
-
-                        <details>
-                <summary class="button">View Source</summary>
-                <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">validate_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationships</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Make sure that the provided `relationships` dictionary is valid</span>
-
-<span class="sd">        - The keys must refer an existing relationships field.</span>
-<span class="sd">        - The values must contain at least a data or a links member.</span>
-
-<span class="sd">        Raise a `ValueError` if the dictionary is not valid.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">rel_dict</span> <span class="ow">in</span> <span class="n">relationships</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__relationships_fields_set__</span><span class="p">:</span>
-                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is not a valid relationship.&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">rel_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">rel_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">))</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;You must provide at least links or data for the &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; relationship.&quot;</span>
-                <span class="p">)</span>
-        <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">errors</span><span class="p">))</span>
-</pre></div>
-
-            </details>
-
-                    <div class="docstring"><p>Make sure that the provided <code>relationships</code> dictionary is valid</p>
-
-<ul>
-<li>The keys must refer an existing relationships field.</li>
-<li>The values must contain at least a data or a links member.</li>
-</ul>
-
-<p>Raise a <code>ValueError</code> if the dictionary is not valid.</p>
-</div>
-
-
-                            </div>
-                            <div id="BaseResource.formatted_relationships" class="classattr">
-                                            <div class="attr function">
-            
-                <span class="def">def</span>
-                <span class="name">formatted_relationships</span><span class="signature">(self, relationships: Dict) -&gt; Dict</span>:
-        </div>
-
-                        <details>
-                <summary class="button">View Source</summary>
-                <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">formatted_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relationships</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Format relationships into the JSON:API format.&quot;&quot;&quot;</span>
-        <span class="n">relationships_dict</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">rel_payload</span> <span class="ow">in</span> <span class="n">relationships</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">related_object</span><span class="p">:</span> <span class="n">BaseResource</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">related_object</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">relationships_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="k">continue</span>
-            <span class="n">rel_data</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="k">if</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">):</span>
-                <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">related_object</span><span class="o">.</span><span class="n">_identifier_dict</span>
-            <span class="k">if</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rel_payload</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span>
-            <span class="n">relationships_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">rel_data</span>
-        <span class="k">return</span> <span class="n">relationships_dict</span>
-</pre></div>
-
-            </details>
-
-                    <div class="docstring"><p>Format relationships into the JSON:API format.</p>
 </div>
 
 
@@ -1028,7 +948,7 @@ two keys:
 	required_attributes: Union[Iterable[str], Literal[&#39;__all__&#39;]],
 	links: Union[Dict, NoneType] = None,
 	relationships: Union[Dict, NoneType] = None,
-	dump_function: Callable[[Dict], str] = &lt;function dumps at 0x7f24dade1040&gt;
+	dump_function: Callable[[Dict], str] = &lt;function dumps at 0x7fec74a4d040&gt;
 ) -&gt; str</span>:
         </div>
 
@@ -1041,7 +961,7 @@ two keys:
         <span class="n">relationships</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">dump_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Dict</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Call `BaseResource.jsonapi_dict()` method and dump the result with dump_function.</span>
+        <span class="sd">&quot;&quot;&quot;Call `jsonapi_dict()` method and dump the result with `dump_function`.</span>
 
 <span class="sd">        By default, the used dump function is `json.dumps()`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1052,9 +972,159 @@ two keys:
 
             </details>
 
-                    <div class="docstring"><p>Call <code><a href="#BaseResource.jsonapi_dict">BaseResource.jsonapi_dict</a>()</code> method and dump the result with dump_function.</p>
+                    <div class="docstring"><p>Call <code>jsonapi_dict()</code> method and dump the result with <code>dump_function</code>.</p>
 
 <p>By default, the used dump function is <code>json.dumps()</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="BaseResource.register_link_factory" class="classattr">
+                                            <div class="attr function">
+                        <div class="decorator">@classmethod</div>
+
+                <span class="def">def</span>
+                <span class="name">register_link_factory</span><span class="signature">(cls, name: str, factory: Callable[[~IdType], str])</span>:
+        </div>
+
+                        <details>
+                <summary class="button">View Source</summary>
+                <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">register_link_factory</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IdType</span><span class="p">],</span> <span class="nb">str</span><span class="p">]):</span>
+        <span class="sd">&quot;&quot;&quot;Add a link factory to the resource.</span>
+
+<span class="sd">        When the resources are dump, these factories are used to produce their</span>
+<span class="sd">        links. The factories are stored in the `__links_factories__`</span>
+<span class="sd">        dictionary.</span>
+
+<span class="sd">        **Parameters**</span>
+
+<span class="sd">        - `name`: the name of the link (for example `&quot;self&quot;`)</span>
+<span class="sd">        - `factory`: a callable taking the id of the resource as parameter and</span>
+<span class="sd">        returning a string representing the url to dump.</span>
+
+<span class="sd">        To register a link name of a relationship, prefix the link name with</span>
+<span class="sd">        the attribute name and two underscores. For example, if an `&quot;article&quot;`</span>
+<span class="sd">        resource has an `&quot;author&quot;` relationship attribute, you can register</span>
+<span class="sd">        `&quot;author__self&quot;` or `&quot;author__related&quot;` links.</span>
+
+<span class="sd">        If the relationship does not exist, raise a `ValueError`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">split_name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">split_name</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">relationship_name</span> <span class="o">=</span> <span class="n">split_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">relationship_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__relationships_fields_set__</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">relationship_name</span><span class="si">}</span><span class="s2">&#39; is not a valid relationship for </span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">__links_factories__</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">factory</span>
+</pre></div>
+
+            </details>
+
+                    <div class="docstring"><p>Add a link factory to the resource.</p>
+
+<p>When the resources are dump, these factories are used to produce their
+links. The factories are stored in the <code>__links_factories__</code>
+dictionary.</p>
+
+<p><strong>Parameters</strong></p>
+
+<ul>
+<li><code>name</code>: the name of the link (for example <code>"self"</code>)</li>
+<li><code>factory</code>: a callable taking the id of the resource as parameter and
+returning a string representing the url to dump.</li>
+</ul>
+
+<p>To register a link name of a relationship, prefix the link name with
+the attribute name and two underscores. For example, if an <code>"article"</code>
+resource has an <code>"author"</code> relationship attribute, you can register
+<code>"author__self"</code> or <code>"author__related"</code> links.</p>
+
+<p>If the relationship does not exist, raise a <code>ValueError</code>.</p>
+</div>
+
+
+                            </div>
+                </section>
+                <section id="BaseResourceMeta">
+                                        <div class="attr class">
+            
+            <span class="def">class</span>
+            <span class="name">BaseResourceMeta</span>(<span class="base">builtins.type</span>):
+        </div>
+
+                        <details>
+                <summary class="button">View Source</summary>
+                <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">BaseResourceMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Metaclass of resource classes.</span>
+
+<span class="sd">    This metaclass converts the `Meta` inner class of the defined models into</span>
+<span class="sd">    special attributes:</span>
+
+<span class="sd">    - `__is_abstract__`: a boolean indicating the model is aimed to be instantiated.</span>
+<span class="sd">    - `__resource_name__`: the resource type name</span>
+<span class="sd">    - `__identifier_meta_fields__`: a set containing extra non standard fields that</span>
+<span class="sd">      contain extra meta-information</span>
+
+<span class="sd">    Moreover, it initialize an empty `__links_factories__` dictionary. It will contain</span>
+<span class="sd">    the links names as keys and their factory functions as values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="n">mcs</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">namespace</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">meta</span> <span class="o">=</span> <span class="n">namespace</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;Meta&quot;</span><span class="p">)</span><span class="o">.</span><span class="vm">__dict__</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">meta</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="bp">cls</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">mcs</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">namespace</span><span class="p">)</span>
+
+        <span class="bp">cls</span><span class="o">.</span><span class="n">__is_abstract__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;is_abstract&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">__resource_name__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;resource_name&quot;</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">__identifier_meta_fields__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;identifier_meta_fields&quot;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">__links_factories__</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__is_abstract__</span> <span class="ow">and</span> <span class="s2">&quot;id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__annotations__</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;A Resource must have an &#39;id&#39; attribute.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">cls</span>
+</pre></div>
+
+            </details>
+
+                    <div class="docstring"><p>Metaclass of resource classes.</p>
+
+<p>This metaclass converts the <code>Meta</code> inner class of the defined models into
+special attributes:</p>
+
+<ul>
+<li><code>__is_abstract__</code>: a boolean indicating the model is aimed to be instantiated.</li>
+<li><code>__resource_name__</code>: the resource type name</li>
+<li><code>__identifier_meta_fields__</code>: a set containing extra non standard fields that
+contain extra meta-information</li>
+</ul>
+
+<p>Moreover, it initialize an empty <code>__links_factories__</code> dictionary. It will contain
+the links names as keys and their factory functions as values.</p>
+</div>
+
+
+                            <div id="BaseResourceMeta.__init__" class="classattr">
+                                            <div class="attr function">
+            
+                <span class="name">BaseResourceMeta</span><span class="signature">(/, *args, **kwargs)</span>        </div>
+
+            
+        
+
+                            </div>
+                            <div id="BaseResourceMeta.mro" class="classattr">
+                                            <div class="attr function">
+            
+                <span class="def">def</span>
+                <span class="name">mro</span><span class="signature">(self, /)</span>:
+        </div>
+
+            
+                    <div class="docstring"><p>Return a type's method resolution order.</p>
 </div>
 
 

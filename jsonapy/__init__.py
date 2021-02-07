@@ -58,6 +58,47 @@ Instead of a dictionary, the `dump()` method allows you to get a JSON string:
 '{"type": "person", "id": 1, "attributes": {"firstName": "Guido", "lastName": "Van Rossum"}}'
 ```
 
+## Links
+
+You can specify the links of the resource by registering factory functions
+that will be used to generate them.
+
+First, define a function taking an id and returning a link. We create it here,
+but it can be a function or method provided by a library, for example
+`Request.url_for(...)` in [Starlette](https://www.starlette.io/).
+
+```pycon
+>>> def make_link(id_) -> str:
+...     '''Placeholder function returning link'''
+...     return f"http://my.api/persons/{id_}"
+...
+```
+
+Then, register the link with `register_link_factory()` method:
+
+```pycon
+>>> PersonResource.register_link_factory("self", make_link)
+```
+
+Now, we can specify the `"self"` link when exporting the object as a dictionary:
+
+```pycon
+>>> guido.jsonapi_dict(
+...     links={"self"},
+...     required_attributes="__all__",
+... )
+...
+{
+  'type': 'person',
+  'id': 1,
+  'attributes': {
+    'firstName': 'Guido',
+    'lastName': 'Van Rossum'
+  },
+  'links': {'self': 'http://my.api/persons/1'}
+}
+```
+
 ## Relationships
 
 You can create related models:
@@ -70,62 +111,51 @@ class ArticleResource(jsonapy.BaseResource):
 
     class Meta:
         resource_name = "article"
+
+ArticleResource.register_link_factory(
+    "self",
+    lambda x: f"http://my.api/articles/{x}"
+)
 ```
 
-When you dump an article, you can specify the relationships you want to dump:
+Specify the links for the relationships by prefixing the links name with the
+name of the relationship:
+
+```python
+ArticleResource.register_link_factory(
+    "author__related",
+    lambda x: f"http://my.api/articles/{x}/author"
+)
+
+```
+
+Then, when you export an article, you can specify the relationships you want to
+dump by passing a dictionary to the `relationships` parameter.
 
 ```pycon
+
 >>> zola = PersonResource(id=1, first_name="Emile", last_name="Zola")
 >>> jaccuse = ArticleResource(id=1, title="J'accuse… !", author=zola)
 >>> jaccuse.jsonapi_dict(
 ...     required_attributes="__all__",
-...     relationships={"author": {"data": True}}
-... )
-...
-{'type': 'article',
- 'id': 1,
- 'attributes': {'title': "J'accuse… !"},
- 'relationships': {'author': {'data': {'type': 'person', 'id': 1}}}}
-```
-
-## Links
-
-You can specify the links of the resource by registering factory functions
-that will be used to generate them.
-
-```pycon
->>> jaccuse.jsonapi_dict(
-...     links={"self": "http://my.api/articles/1"},
-...     required_attributes="__all__",
-...     relationships={"author": {
-...     "data": True,
-...     "links": {"self": "http://my.api/articles/1/author", "related": "http://my.api/authors/1"}
-...     }}
+...     links={"self"},
+...     relationships={"author": {"data": True, "links": {"related"}}
 ... )
 ...
 {
-  "type": "article",
-  "id": 1,
-  "attributes": {
-    "title": "J'accuse… !"
-  },
-  "links": {
-    "self": "http://my.api/articles/1"
-  },
-  "relationships": {
-    "author": {
-      "data": {
-        "type": "person",
-        "id": 1
-      },
-      "links": {
-        "self": "http://my.api/articles/1/author",
-        "related": "http://my.api/authors/1"
-      }
+  'type': 'article',
+  'id': 1,
+  'attributes': {'title': "J'accuse… !"},
+  'links': {'self': 'http://my.api/articles/1'},
+  'relationships': {
+    'author': {
+      'data': {'type': 'person', 'id': 1},
+      'links': {'related': 'http://my.api/articles/1/author'}
     }
   }
 }
 ```
+
 
 ## Complete reference
 

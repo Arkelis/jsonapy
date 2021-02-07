@@ -25,8 +25,8 @@
   <li><a href="#jsonapy-dumping-jsonapi-in-python">JSON:APy - Dumping JSON:API in Python</a>
   <ul>
     <li><a href="#basics">Basics</a></li>
-    <li><a href="#relationships">Relationships</a></li>
     <li><a href="#links">Links</a></li>
+    <li><a href="#relationships">Relationships</a></li>
     <li><a href="#complete-reference">Complete reference</a></li>
   </ul></li>
 </ul>
@@ -35,6 +35,7 @@
                     <h2>Submodules</h2>
                     <ul>
                             <li><a href="jsonapy/base.html">jsonapy.base</a></li>
+                            <li><a href="jsonapy/document.html">jsonapy.document</a></li>
                             <li><a href="jsonapy/utils.html">jsonapy.utils</a></li>
                     </ul>
 
@@ -100,6 +101,44 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 <span class="go">&#39;{&quot;type&quot;: &quot;person&quot;, &quot;id&quot;: 1, &quot;attributes&quot;: {&quot;firstName&quot;: &quot;Guido&quot;, &quot;lastName&quot;: &quot;Van Rossum&quot;}}&#39;</span>
 </code></pre></div>
 
+<h2 id="links">Links</h2>
+
+<p>You can specify the links of the resource by registering factory functions
+that will be used to generate them.</p>
+
+<p>First, define a function taking an id and returning a link. We create it here,
+but it can be a function or method provided by a library, for example
+<code>Request.url_for(...)</code> in <a href="https://www.starlette.io/">Starlette</a>.</p>
+
+<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">make_link</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="sd">&#39;&#39;&#39;Placeholder function returning link&#39;&#39;&#39;</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;http://my.api/persons/</span><span class="si">{</span><span class="n">id_</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="gp">...</span>
+</code></pre></div>
+
+<p>Then, register the link with <code>register_link_factory()</code> method:</p>
+
+<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">PersonResource</span><span class="o">.</span><span class="n">register_link_factory</span><span class="p">(</span><span class="s2">&quot;self&quot;</span><span class="p">,</span> <span class="n">make_link</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Now, we can specify the <code>"self"</code> link when exporting the object as a dictionary:</p>
+
+<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">guido</span><span class="o">.</span><span class="n">jsonapi_dict</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">links</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;self&quot;</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="n">required_attributes</span><span class="o">=</span><span class="s2">&quot;__all__&quot;</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="go">{</span>
+<span class="go">  &#39;type&#39;: &#39;person&#39;,</span>
+<span class="go">  &#39;id&#39;: 1,</span>
+<span class="go">  &#39;attributes&#39;: {</span>
+<span class="go">    &#39;firstName&#39;: &#39;Guido&#39;,</span>
+<span class="go">    &#39;lastName&#39;: &#39;Van Rossum&#39;</span>
+<span class="go">  },</span>
+<span class="go">  &#39;links&#39;: {&#39;self&#39;: &#39;http://my.api/persons/1&#39;}</span>
+<span class="go">}</span>
+</code></pre></div>
+
 <h2 id="relationships">Relationships</h2>
 
 <p>You can create related models:</p>
@@ -111,55 +150,42 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 
     <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
         <span class="n">resource_name</span> <span class="o">=</span> <span class="s2">&quot;article&quot;</span>
+
+<span class="n">ArticleResource</span><span class="o">.</span><span class="n">register_link_factory</span><span class="p">(</span>
+    <span class="s2">&quot;self&quot;</span><span class="p">,</span>
+    <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;http://my.api/articles/</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="p">)</span>
 </code></pre></div>
 
-<p>When you dump an article, you can specify the relationships you want to dump:</p>
+<p>Specify the links for the relationships by prefixing the links name with the
+name of the relationship:</p>
+
+<div class="codehilite"><pre><span></span><code><span class="n">ArticleResource</span><span class="o">.</span><span class="n">register_link_factory</span><span class="p">(</span>
+    <span class="s2">&quot;author__related&quot;</span><span class="p">,</span>
+    <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;http://my.api/articles/</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">/author&quot;</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p>Then, when you export an article, you can specify the relationships you want to
+dump by passing a dictionary to the <code>relationships</code> parameter.</p>
 
 <div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">zola</span> <span class="o">=</span> <span class="n">PersonResource</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s2">&quot;Emile&quot;</span><span class="p">,</span> <span class="n">last_name</span><span class="o">=</span><span class="s2">&quot;Zola&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">jaccuse</span> <span class="o">=</span> <span class="n">ArticleResource</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;J&#39;accuse… !&quot;</span><span class="p">,</span> <span class="n">author</span><span class="o">=</span><span class="n">zola</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">jaccuse</span><span class="o">.</span><span class="n">jsonapi_dict</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">required_attributes</span><span class="o">=</span><span class="s2">&quot;__all__&quot;</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">relationships</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}}</span>
-<span class="gp">... </span><span class="p">)</span>
-<span class="gp">...</span>
-<span class="go">{&#39;type&#39;: &#39;article&#39;,</span>
-<span class="go"> &#39;id&#39;: 1,</span>
-<span class="go"> &#39;attributes&#39;: {&#39;title&#39;: &quot;J&#39;accuse… !&quot;},</span>
-<span class="go"> &#39;relationships&#39;: {&#39;author&#39;: {&#39;data&#39;: {&#39;type&#39;: &#39;person&#39;, &#39;id&#39;: 1}}}}</span>
-</code></pre></div>
-
-<h2 id="links">Links</h2>
-
-<p>You can specify the links when dumping an instance:</p>
-
-<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">jaccuse</span><span class="o">.</span><span class="n">jsonapi_dict</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">links</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;self&quot;</span><span class="p">:</span> <span class="s2">&quot;http://my.api/articles/1&quot;</span><span class="p">},</span>
-<span class="gp">... </span>    <span class="n">required_attributes</span><span class="o">=</span><span class="s2">&quot;__all__&quot;</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">relationships</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="p">{</span>
-<span class="gp">... </span>    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;self&quot;</span><span class="p">:</span> <span class="s2">&quot;http://my.api/articles/1/author&quot;</span><span class="p">,</span> <span class="s2">&quot;related&quot;</span><span class="p">:</span> <span class="s2">&quot;http://my.api/authors/1&quot;</span><span class="p">}</span>
-<span class="gp">... </span>    <span class="p">}}</span>
+<span class="gp">... </span>    <span class="n">links</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;self&quot;</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="n">relationships</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;related&quot;</span><span class="p">}}</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">...</span>
 <span class="go">{</span>
-<span class="go">  &quot;type&quot;: &quot;article&quot;,</span>
-<span class="go">  &quot;id&quot;: 1,</span>
-<span class="go">  &quot;attributes&quot;: {</span>
-<span class="go">    &quot;title&quot;: &quot;J&#39;accuse… !&quot;</span>
-<span class="go">  },</span>
-<span class="go">  &quot;links&quot;: {</span>
-<span class="go">    &quot;self&quot;: &quot;http://my.api/articles/1&quot;</span>
-<span class="go">  },</span>
-<span class="go">  &quot;relationships&quot;: {</span>
-<span class="go">    &quot;author&quot;: {</span>
-<span class="go">      &quot;data&quot;: {</span>
-<span class="go">        &quot;type&quot;: &quot;person&quot;,</span>
-<span class="go">        &quot;id&quot;: 1</span>
-<span class="go">      },</span>
-<span class="go">      &quot;links&quot;: {</span>
-<span class="go">        &quot;self&quot;: &quot;http://my.api/articles/1/author&quot;,</span>
-<span class="go">        &quot;related&quot;: &quot;http://my.api/authors/1&quot;</span>
-<span class="go">      }</span>
+<span class="go">  &#39;type&#39;: &#39;article&#39;,</span>
+<span class="go">  &#39;id&#39;: 1,</span>
+<span class="go">  &#39;attributes&#39;: {&#39;title&#39;: &quot;J&#39;accuse… !&quot;},</span>
+<span class="go">  &#39;links&#39;: {&#39;self&#39;: &#39;http://my.api/articles/1&#39;},</span>
+<span class="go">  &#39;relationships&#39;: {</span>
+<span class="go">    &#39;author&#39;: {</span>
+<span class="go">      &#39;data&#39;: {&#39;type&#39;: &#39;person&#39;, &#39;id&#39;: 1},</span>
+<span class="go">      &#39;links&#39;: {&#39;related&#39;: &#39;http://my.api/articles/1/author&#39;}</span>
 <span class="go">    }</span>
 <span class="go">  }</span>
 <span class="go">}</span>
@@ -174,7 +200,7 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
                 <summary class="button">View Source</summary>
                 <div class="codehilite"><pre><span></span><span class="c1"># Copyright (c) 2021 Guillaume Fayard</span>
 <span class="c1"># This library is licensed under the MIT license</span>
-<span class="c1"># For a complete copy of the license, see https://pycolore.mit-license.org/</span>
+<span class="c1"># For a complete copy of the license, see the LICENSE file.</span>
 
 <span class="sd">&quot;&quot;&quot;# JSON:APy - Dumping JSON:API in Python</span>
 
@@ -232,6 +258,47 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 <span class="sd">&#39;{&quot;type&quot;: &quot;person&quot;, &quot;id&quot;: 1, &quot;attributes&quot;: {&quot;firstName&quot;: &quot;Guido&quot;, &quot;lastName&quot;: &quot;Van Rossum&quot;}}&#39;</span>
 <span class="sd">```</span>
 
+<span class="sd">## Links</span>
+
+<span class="sd">You can specify the links of the resource by registering factory functions</span>
+<span class="sd">that will be used to generate them.</span>
+
+<span class="sd">First, define a function taking an id and returning a link. We create it here,</span>
+<span class="sd">but it can be a function or method provided by a library, for example</span>
+<span class="sd">`Request.url_for(...)` in [Starlette](https://www.starlette.io/).</span>
+
+<span class="sd">```pycon</span>
+<span class="sd">&gt;&gt;&gt; def make_link(id_) -&gt; str:</span>
+<span class="sd">...     &#39;&#39;&#39;Placeholder function returning link&#39;&#39;&#39;</span>
+<span class="sd">...     return f&quot;http://my.api/persons/{id_}&quot;</span>
+<span class="sd">...</span>
+<span class="sd">```</span>
+
+<span class="sd">Then, register the link with `register_link_factory()` method:</span>
+
+<span class="sd">```pycon</span>
+<span class="sd">&gt;&gt;&gt; PersonResource.register_link_factory(&quot;self&quot;, make_link)</span>
+<span class="sd">```</span>
+
+<span class="sd">Now, we can specify the `&quot;self&quot;` link when exporting the object as a dictionary:</span>
+
+<span class="sd">```pycon</span>
+<span class="sd">&gt;&gt;&gt; guido.jsonapi_dict(</span>
+<span class="sd">...     links={&quot;self&quot;},</span>
+<span class="sd">...     required_attributes=&quot;__all__&quot;,</span>
+<span class="sd">... )</span>
+<span class="sd">...</span>
+<span class="sd">{</span>
+<span class="sd">  &#39;type&#39;: &#39;person&#39;,</span>
+<span class="sd">  &#39;id&#39;: 1,</span>
+<span class="sd">  &#39;attributes&#39;: {</span>
+<span class="sd">    &#39;firstName&#39;: &#39;Guido&#39;,</span>
+<span class="sd">    &#39;lastName&#39;: &#39;Van Rossum&#39;</span>
+<span class="sd">  },</span>
+<span class="sd">  &#39;links&#39;: {&#39;self&#39;: &#39;http://my.api/persons/1&#39;}</span>
+<span class="sd">}</span>
+<span class="sd">```</span>
+
 <span class="sd">## Relationships</span>
 
 <span class="sd">You can create related models:</span>
@@ -244,61 +311,51 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 
 <span class="sd">    class Meta:</span>
 <span class="sd">        resource_name = &quot;article&quot;</span>
+
+<span class="sd">ArticleResource.register_link_factory(</span>
+<span class="sd">    &quot;self&quot;,</span>
+<span class="sd">    lambda x: f&quot;http://my.api/articles/{x}&quot;</span>
+<span class="sd">)</span>
 <span class="sd">```</span>
 
-<span class="sd">When you dump an article, you can specify the relationships you want to dump:</span>
+<span class="sd">Specify the links for the relationships by prefixing the links name with the</span>
+<span class="sd">name of the relationship:</span>
+
+<span class="sd">```python</span>
+<span class="sd">ArticleResource.register_link_factory(</span>
+<span class="sd">    &quot;author__related&quot;,</span>
+<span class="sd">    lambda x: f&quot;http://my.api/articles/{x}/author&quot;</span>
+<span class="sd">)</span>
+
+<span class="sd">```</span>
+
+<span class="sd">Then, when you export an article, you can specify the relationships you want to</span>
+<span class="sd">dump by passing a dictionary to the `relationships` parameter.</span>
 
 <span class="sd">```pycon</span>
+
 <span class="sd">&gt;&gt;&gt; zola = PersonResource(id=1, first_name=&quot;Emile&quot;, last_name=&quot;Zola&quot;)</span>
 <span class="sd">&gt;&gt;&gt; jaccuse = ArticleResource(id=1, title=&quot;J&#39;accuse… !&quot;, author=zola)</span>
 <span class="sd">&gt;&gt;&gt; jaccuse.jsonapi_dict(</span>
 <span class="sd">...     required_attributes=&quot;__all__&quot;,</span>
-<span class="sd">...     relationships={&quot;author&quot;: {&quot;data&quot;: True}}</span>
-<span class="sd">... )</span>
-<span class="sd">...</span>
-<span class="sd">{&#39;type&#39;: &#39;article&#39;,</span>
-<span class="sd"> &#39;id&#39;: 1,</span>
-<span class="sd"> &#39;attributes&#39;: {&#39;title&#39;: &quot;J&#39;accuse… !&quot;},</span>
-<span class="sd"> &#39;relationships&#39;: {&#39;author&#39;: {&#39;data&#39;: {&#39;type&#39;: &#39;person&#39;, &#39;id&#39;: 1}}}}</span>
-<span class="sd">```</span>
-
-<span class="sd">## Links</span>
-
-<span class="sd">You can specify the links when dumping an instance:</span>
-
-<span class="sd">```pycon</span>
-<span class="sd">&gt;&gt;&gt; jaccuse.jsonapi_dict(</span>
-<span class="sd">...     links={&quot;self&quot;: &quot;http://my.api/articles/1&quot;},</span>
-<span class="sd">...     required_attributes=&quot;__all__&quot;,</span>
-<span class="sd">...     relationships={&quot;author&quot;: {</span>
-<span class="sd">...     &quot;data&quot;: True,</span>
-<span class="sd">...     &quot;links&quot;: {&quot;self&quot;: &quot;http://my.api/articles/1/author&quot;, &quot;related&quot;: &quot;http://my.api/authors/1&quot;}</span>
-<span class="sd">...     }}</span>
+<span class="sd">...     links={&quot;self&quot;},</span>
+<span class="sd">...     relationships={&quot;author&quot;: {&quot;data&quot;: True, &quot;links&quot;: {&quot;related&quot;}}</span>
 <span class="sd">... )</span>
 <span class="sd">...</span>
 <span class="sd">{</span>
-<span class="sd">  &quot;type&quot;: &quot;article&quot;,</span>
-<span class="sd">  &quot;id&quot;: 1,</span>
-<span class="sd">  &quot;attributes&quot;: {</span>
-<span class="sd">    &quot;title&quot;: &quot;J&#39;accuse… !&quot;</span>
-<span class="sd">  },</span>
-<span class="sd">  &quot;links&quot;: {</span>
-<span class="sd">    &quot;self&quot;: &quot;http://my.api/articles/1&quot;</span>
-<span class="sd">  },</span>
-<span class="sd">  &quot;relationships&quot;: {</span>
-<span class="sd">    &quot;author&quot;: {</span>
-<span class="sd">      &quot;data&quot;: {</span>
-<span class="sd">        &quot;type&quot;: &quot;person&quot;,</span>
-<span class="sd">        &quot;id&quot;: 1</span>
-<span class="sd">      },</span>
-<span class="sd">      &quot;links&quot;: {</span>
-<span class="sd">        &quot;self&quot;: &quot;http://my.api/articles/1/author&quot;,</span>
-<span class="sd">        &quot;related&quot;: &quot;http://my.api/authors/1&quot;</span>
-<span class="sd">      }</span>
+<span class="sd">  &#39;type&#39;: &#39;article&#39;,</span>
+<span class="sd">  &#39;id&#39;: 1,</span>
+<span class="sd">  &#39;attributes&#39;: {&#39;title&#39;: &quot;J&#39;accuse… !&quot;},</span>
+<span class="sd">  &#39;links&#39;: {&#39;self&#39;: &#39;http://my.api/articles/1&#39;},</span>
+<span class="sd">  &#39;relationships&#39;: {</span>
+<span class="sd">    &#39;author&#39;: {</span>
+<span class="sd">      &#39;data&#39;: {&#39;type&#39;: &#39;person&#39;, &#39;id&#39;: 1},</span>
+<span class="sd">      &#39;links&#39;: {&#39;related&#39;: &#39;http://my.api/articles/1/author&#39;}</span>
 <span class="sd">    }</span>
 <span class="sd">  }</span>
 <span class="sd">}</span>
 <span class="sd">```</span>
+
 
 <span class="sd">## Complete reference</span>
 

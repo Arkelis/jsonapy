@@ -86,6 +86,27 @@ class BResource(BaseResource):
 >>> BResource.__relationships_fields_set__
 {'related'}
 ```
+
+## Link registering
+
+To integrate the endpoints of your API in the resources, you can register links
+factories function that will be used to produce resource's links.
+
+```python
+BResource.register_link_factory("self", lambda x: f"/bresource/{x}")
+```
+
+For the relationships links, prefix the links names with the relationship name:
+
+```python
+BResource.register_link_factory(
+    "related__self",
+    lambda x: f"/bresource/{x}/relationships/related"
+)
+```
+
+The links factories can be accessed by the `__links_factories__` special
+attribute. See `BaseResource.register_link_factory`.
 """
 
 
@@ -173,6 +194,9 @@ class BaseResourceMeta(type):
     - `__resource_name__`: the resource type name
     - `__identifier_meta_fields__`: a set containing extra non standard fields that
       contain extra meta-information
+
+    Moreover, it initialize an empty `__links_factories__` dictionary. It will contain
+    the links names as keys and their factory functions as values.
     """
 
     def __new__(mcs, name, bases, namespace):
@@ -365,7 +389,8 @@ class BaseResource(_BaseResource, metaclass=BaseResourceMeta):
         """Add a link factory to the resource.
 
         When the resources are dump, these factories are used to produce their
-        links.
+        links. The factories are stored in the `__links_factories__`
+        dictionary.
 
         **Parameters**
 
