@@ -1,4 +1,4 @@
 .PHONY: docs
 
 docs:
-	@./scripts/docs.sh
+	@./scripts/docs/docs.sh

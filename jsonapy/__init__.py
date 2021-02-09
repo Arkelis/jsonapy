@@ -65,7 +65,7 @@ that will be used to generate them.
 
 First, define a function taking an id and returning a link. We create it here,
 but it can be a function or method provided by a library, for example
-`Request.url_for(...)` in [Starlette](https://www.starlette.io/).
+`app.url_path_for()` in [Starlette](https://www.starlette.io/).
 
 ```pycon
 >>> def make_link(id_) -> str:
