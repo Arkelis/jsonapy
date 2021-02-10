@@ -8,4 +8,4 @@
 echo Launching pytest...
 poetry run pytest tests
 status=$?
-[ $status -eq 0 ] && echo "tests successful" || (echo Tests failed! >&2 && exit $status)
+[ $status -eq 0 ] && echo "tests successful" || (echo Tests failed! >&2; exit $status)
