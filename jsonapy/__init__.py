@@ -60,24 +60,11 @@ Instead of a dictionary, the `dump()` method allows you to get a JSON string:
 
 ## Links
 
-You can specify the links of the resource by registering factory functions
-that will be used to generate them.
-
-First, define a function taking an id and returning a link. We create it here,
-but it can be a function or method provided by a library, for example
-`app.url_path_for()` in [Starlette](https://www.starlette.io/).
+Resource links can be specified by registering factory functions that will be
+used to generate them using `register_link_factory()` method:
 
 ```pycon
->>> def make_link(id_) -> str:
-...     '''Placeholder function returning link'''
-...     return f"http://my.api/persons/{id_}"
-...
-```
-
-Then, register the link with `register_link_factory()` method:
-
-```pycon
->>> PersonResource.register_link_factory("self", make_link)
+>>> PersonResource.register_link_factory("self", lambda id_: f"http://my.api/persons/{id_})
 ```
 
 Now, we can specify the `"self"` link when exporting the object as a dictionary:
