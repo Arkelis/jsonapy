@@ -2,6 +2,11 @@
 # This library is licensed under the MIT license
 # For a complete copy of the license, see the LICENSE file.
 
+""" # JSON:API document creation
+
+> **WIP:** This module is under construction
+"""
+
 from typing import Dict
 from typing import Iterable
 from typing import Literal

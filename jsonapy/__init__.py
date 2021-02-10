@@ -2,7 +2,7 @@
 # This library is licensed under the MIT license
 # For a complete copy of the license, see the LICENSE file.
 
-"""# JSON:APy - Dumping JSON:API in Python
+""" # JSON:APy - Dumping JSON:API in Python
 
 > **WIP:** this library is still in early development phase.
 
@@ -15,9 +15,9 @@ its source is hosted on [GitHub](https://github.com/Arkelis/jsonapy).
 
 ## Basics
 
-This package lets you define models and dump them into dict with the JSON:API
-structure. First, define a resource, it is a class inheriting from
-`jsonapy.base.BaseResource` in which the attributes are specified with annotations:
+This package lets you define models and dump them into dictionaries with the
+JSON:API structure. First, define a resource, it is a class inheriting from
+`jsonapy.base.BaseResource` in which the fields are defined with annotations:
 
 ```python
 import jsonapy
@@ -31,8 +31,9 @@ class PersonResource(jsonapy.BaseResource):
         resource_name = "person"
 ```
 
-The `Meta` innerclass is used to set the resource name (the `"type"` field).
-You can now dump an instance of this resource into JSON:API-structured dictionary:
+The `Meta` inner class is used to set the resource name (the `"type"` field).
+Instances of this resource can be now dumped into JSON:API-structured
+dictionaries:
 
 ```pycon
 >>> guido = PersonResource(id=1, first_name="Guido", last_name="Van Rossum")
@@ -42,7 +43,7 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
  'attributes': {'firstName': 'Guido', 'lastName': 'Van Rossum'}}
 ```
 
-You can also specify the attributes that you want to dump in the dictionary.
+It is also possible to specify the fields to dump in the dictionary.
 
 ```pycon
 >>> guido.jsonapi_dict(required_attributes=["first_name"])
@@ -51,11 +52,11 @@ You can also specify the attributes that you want to dump in the dictionary.
  'attributes': {'firstName': 'Guido'}}
 ```
 
-Instead of a dictionary, the `dump()` method allows you to get a JSON string:
+Instead of a dictionary, the `dump()` method allows to get a JSON string:
 
 ```pycon
 >>> guido.dump(required_attributes=["first_name"])
-'{"type": "person", "id": 1, "attributes": {"firstName": "Guido", "lastName": "Van Rossum"}}'
+'{"type": "person", "id": 1, "attributes": {"firstName": "Guido"}}'
 ```
 
 ## Links
@@ -67,7 +68,7 @@ used to generate them using `register_link_factory()` method:
 >>> PersonResource.register_link_factory("self", lambda id_: f"http://my.api/persons/{id_})
 ```
 
-Now, we can specify the `"self"` link when exporting the object as a dictionary:
+Now, the `"self"` link can be used when exporting the object as a dictionary:
 
 ```pycon
 >>> guido.jsonapi_dict(
@@ -116,8 +117,8 @@ ArticleResource.register_link_factory(
 
 ```
 
-Then, when you export an article, you can specify the relationships you want to
-dump by passing a dictionary to the `relationships` parameter.
+Then, when you export an article, you can indicate the relationships you want
+to dump by passing a dictionary to the `relationships` parameter.
 
 ```pycon
 
@@ -146,7 +147,7 @@ dump by passing a dictionary to the `relationships` parameter.
 
 ## Complete reference
 
-For a more complete reference about resources, go to `jsonapy.base` module.
+For a more complete reference about resources, see `jsonapy.base` module.
 
 """
 

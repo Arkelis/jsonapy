@@ -72,9 +72,9 @@ its source is hosted on <a href="https://github.com/Arkelis/jsonapy">GitHub</a>.
 
 <h2 id="basics">Basics</h2>
 
-<p>This package lets you define models and dump them into dict with the JSON:API
-structure. First, define a resource, it is a class inheriting from
-<code><a href="jsonapy/base.html#BaseResource">jsonapy.base.BaseResource</a></code> in which the attributes are specified with annotations:</p>
+<p>This package lets you define models and dump them into dictionaries with the
+JSON:API structure. First, define a resource, it is a class inheriting from
+<code><a href="jsonapy/base.html#BaseResource">jsonapy.base.BaseResource</a></code> in which the fields are defined with annotations:</p>
 
 <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">jsonapy</span>
 
@@ -87,8 +87,9 @@ structure. First, define a resource, it is a class inheriting from
         <span class="n">resource_name</span> <span class="o">=</span> <span class="s2">&quot;person&quot;</span>
 </code></pre></div>
 
-<p>The <code>Meta</code> innerclass is used to set the resource name (the <code>"type"</code> field).
-You can now dump an instance of this resource into JSON:API-structured dictionary:</p>
+<p>The <code>Meta</code> inner class is used to set the resource name (the <code>"type"</code> field).
+Instances of this resource can be now dumped into JSON:API-structured
+dictionaries:</p>
 
 <div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">guido</span> <span class="o">=</span> <span class="n">PersonResource</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s2">&quot;Guido&quot;</span><span class="p">,</span> <span class="n">last_name</span><span class="o">=</span><span class="s2">&quot;Van Rossum&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">guido</span><span class="o">.</span><span class="n">jsonapi_dict</span><span class="p">(</span><span class="n">required_attributes</span><span class="o">=</span><span class="s2">&quot;__all__&quot;</span><span class="p">)</span>
@@ -97,7 +98,7 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 <span class="go"> &#39;attributes&#39;: {&#39;firstName&#39;: &#39;Guido&#39;, &#39;lastName&#39;: &#39;Van Rossum&#39;}}</span>
 </code></pre></div>
 
-<p>You can also specify the attributes that you want to dump in the dictionary.</p>
+<p>It is also possible to specify the fields to dump in the dictionary.</p>
 
 <div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">guido</span><span class="o">.</span><span class="n">jsonapi_dict</span><span class="p">(</span><span class="n">required_attributes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;first_name&quot;</span><span class="p">])</span>
 <span class="go">{&#39;type&#39;: &#39;person&#39;,</span>
@@ -105,33 +106,21 @@ You can now dump an instance of this resource into JSON:API-structured dictionar
 <span class="go"> &#39;attributes&#39;: {&#39;firstName&#39;: &#39;Guido&#39;}}</span>
 </code></pre></div>
 
-<p>Instead of a dictionary, the <code>dump()</code> method allows you to get a JSON string:</p>
+<p>Instead of a dictionary, the <code>dump()</code> method allows to get a JSON string:</p>
 
 <div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">guido</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">required_attributes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;first_name&quot;</span><span class="p">])</span>
-<span class="go">&#39;{&quot;type&quot;: &quot;person&quot;, &quot;id&quot;: 1, &quot;attributes&quot;: {&quot;firstName&quot;: &quot;Guido&quot;, &quot;lastName&quot;: &quot;Van Rossum&quot;}}&#39;</span>
+<span class="go">&#39;{&quot;type&quot;: &quot;person&quot;, &quot;id&quot;: 1, &quot;attributes&quot;: {&quot;firstName&quot;: &quot;Guido&quot;}}&#39;</span>
 </code></pre></div>
 
 <h2 id="links">Links</h2>
 
-<p>You can specify the links of the resource by registering factory functions
-that will be used to generate them.</p>
+<p>Resource links can be specified by registering factory functions that will be
+used to generate them using <code>register_link_factory()</code> method:</p>
 
-<p>First, define a function taking an id and returning a link. We create it here,
-but it can be a function or method provided by a library, for example
-<code>app.url_path_for()</code> in <a href="https://www.starlette.io/">Starlette</a>.</p>
-
-<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">make_link</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="gp">... </span>    <span class="sd">&#39;&#39;&#39;Placeholder function returning link&#39;&#39;&#39;</span>
-<span class="gp">... </span>    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;http://my.api/persons/</span><span class="si">{</span><span class="n">id_</span><span class="si">}</span><span class="s2">&quot;</span>
-<span class="gp">...</span>
+<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">PersonResource</span><span class="o">.</span><span class="n">register_link_factory</span><span class="p">(</span><span class="s2">&quot;self&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">id_</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;http://my.api/persons/</span><span class="si">{</span><span class="n">id_</span><span class="si">}</span><span class="s2">)</span>
 </code></pre></div>
 
-<p>Then, register the link with <code>register_link_factory()</code> method:</p>
-
-<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">PersonResource</span><span class="o">.</span><span class="n">register_link_factory</span><span class="p">(</span><span class="s2">&quot;self&quot;</span><span class="p">,</span> <span class="n">make_link</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Now, we can specify the <code>"self"</code> link when exporting the object as a dictionary:</p>
+<p>Now, the <code>"self"</code> link can be used when exporting the object as a dictionary:</p>
 
 <div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">guido</span><span class="o">.</span><span class="n">jsonapi_dict</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">links</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;self&quot;</span><span class="p">},</span>
@@ -176,8 +165,8 @@ name of the relationship:</p>
 <span class="p">)</span>
 </code></pre></div>
 
-<p>Then, when you export an article, you can specify the relationships you want to
-dump by passing a dictionary to the <code>relationships</code> parameter.</p>
+<p>Then, when you export an article, you can indicate the relationships you want
+to dump by passing a dictionary to the <code>relationships</code> parameter.</p>
 
 <div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">zola</span> <span class="o">=</span> <span class="n">PersonResource</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">first_name</span><span class="o">=</span><span class="s2">&quot;Emile&quot;</span><span class="p">,</span> <span class="n">last_name</span><span class="o">=</span><span class="s2">&quot;Zola&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">jaccuse</span> <span class="o">=</span> <span class="n">ArticleResource</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;J&#39;accuse… !&quot;</span><span class="p">,</span> <span class="n">author</span><span class="o">=</span><span class="n">zola</span><span class="p">)</span>
@@ -203,7 +192,7 @@ dump by passing a dictionary to the <code>relationships</code> parameter.</p>
 
 <h2 id="complete-reference">Complete reference</h2>
 
-<p>For a more complete reference about resources, go to <code><a href="jsonapy/base.html">jsonapy.base</a></code> module.</p>
+<p>For a more complete reference about resources, see <code><a href="jsonapy/base.html">jsonapy.base</a></code> module.</p>
 </div>
 
                         <details>
@@ -212,7 +201,7 @@ dump by passing a dictionary to the <code>relationships</code> parameter.</p>
 <span class="c1"># This library is licensed under the MIT license</span>
 <span class="c1"># For a complete copy of the license, see the LICENSE file.</span>
 
-<span class="sd">&quot;&quot;&quot;# JSON:APy - Dumping JSON:API in Python</span>
+<span class="sd">&quot;&quot;&quot; # JSON:APy - Dumping JSON:API in Python</span>
 
 <span class="sd">&gt; **WIP:** this library is still in early development phase.</span>
 
@@ -225,9 +214,9 @@ dump by passing a dictionary to the <code>relationships</code> parameter.</p>
 
 <span class="sd">## Basics</span>
 
-<span class="sd">This package lets you define models and dump them into dict with the JSON:API</span>
-<span class="sd">structure. First, define a resource, it is a class inheriting from</span>
-<span class="sd">`jsonapy.base.BaseResource` in which the attributes are specified with annotations:</span>
+<span class="sd">This package lets you define models and dump them into dictionaries with the</span>
+<span class="sd">JSON:API structure. First, define a resource, it is a class inheriting from</span>
+<span class="sd">`jsonapy.base.BaseResource` in which the fields are defined with annotations:</span>
 
 <span class="sd">```python</span>
 <span class="sd">import jsonapy</span>
@@ -241,8 +230,9 @@ dump by passing a dictionary to the <code>relationships</code> parameter.</p>
 <span class="sd">        resource_name = &quot;person&quot;</span>
 <span class="sd">```</span>
 
-<span class="sd">The `Meta` innerclass is used to set the resource name (the `&quot;type&quot;` field).</span>
-<span class="sd">You can now dump an instance of this resource into JSON:API-structured dictionary:</span>
+<span class="sd">The `Meta` inner class is used to set the resource name (the `&quot;type&quot;` field).</span>
+<span class="sd">Instances of this resource can be now dumped into JSON:API-structured</span>
+<span class="sd">dictionaries:</span>
 
 <span class="sd">```pycon</span>
 <span class="sd">&gt;&gt;&gt; guido = PersonResource(id=1, first_name=&quot;Guido&quot;, last_name=&quot;Van Rossum&quot;)</span>
@@ -252,7 +242,7 @@ dump by passing a dictionary to the <code>relationships</code> parameter.</p>
 <span class="sd"> &#39;attributes&#39;: {&#39;firstName&#39;: &#39;Guido&#39;, &#39;lastName&#39;: &#39;Van Rossum&#39;}}</span>
 <span class="sd">```</span>
 
-<span class="sd">You can also specify the attributes that you want to dump in the dictionary.</span>
+<span class="sd">It is also possible to specify the fields to dump in the dictionary.</span>
 
 <span class="sd">```pycon</span>
 <span class="sd">&gt;&gt;&gt; guido.jsonapi_dict(required_attributes=[&quot;first_name&quot;])</span>
@@ -261,36 +251,23 @@ dump by passing a dictionary to the <code>relationships</code> parameter.</p>
 <span class="sd"> &#39;attributes&#39;: {&#39;firstName&#39;: &#39;Guido&#39;}}</span>
 <span class="sd">```</span>
 
-<span class="sd">Instead of a dictionary, the `dump()` method allows you to get a JSON string:</span>
+<span class="sd">Instead of a dictionary, the `dump()` method allows to get a JSON string:</span>
 
 <span class="sd">```pycon</span>
 <span class="sd">&gt;&gt;&gt; guido.dump(required_attributes=[&quot;first_name&quot;])</span>
-<span class="sd">&#39;{&quot;type&quot;: &quot;person&quot;, &quot;id&quot;: 1, &quot;attributes&quot;: {&quot;firstName&quot;: &quot;Guido&quot;, &quot;lastName&quot;: &quot;Van Rossum&quot;}}&#39;</span>
+<span class="sd">&#39;{&quot;type&quot;: &quot;person&quot;, &quot;id&quot;: 1, &quot;attributes&quot;: {&quot;firstName&quot;: &quot;Guido&quot;}}&#39;</span>
 <span class="sd">```</span>
 
 <span class="sd">## Links</span>
 
-<span class="sd">You can specify the links of the resource by registering factory functions</span>
-<span class="sd">that will be used to generate them.</span>
-
-<span class="sd">First, define a function taking an id and returning a link. We create it here,</span>
-<span class="sd">but it can be a function or method provided by a library, for example</span>
-<span class="sd">`app.url_path_for()` in [Starlette](https://www.starlette.io/).</span>
+<span class="sd">Resource links can be specified by registering factory functions that will be</span>
+<span class="sd">used to generate them using `register_link_factory()` method:</span>
 
 <span class="sd">```pycon</span>
-<span class="sd">&gt;&gt;&gt; def make_link(id_) -&gt; str:</span>
-<span class="sd">...     &#39;&#39;&#39;Placeholder function returning link&#39;&#39;&#39;</span>
-<span class="sd">...     return f&quot;http://my.api/persons/{id_}&quot;</span>
-<span class="sd">...</span>
+<span class="sd">&gt;&gt;&gt; PersonResource.register_link_factory(&quot;self&quot;, lambda id_: f&quot;http://my.api/persons/{id_})</span>
 <span class="sd">```</span>
 
-<span class="sd">Then, register the link with `register_link_factory()` method:</span>
-
-<span class="sd">```pycon</span>
-<span class="sd">&gt;&gt;&gt; PersonResource.register_link_factory(&quot;self&quot;, make_link)</span>
-<span class="sd">```</span>
-
-<span class="sd">Now, we can specify the `&quot;self&quot;` link when exporting the object as a dictionary:</span>
+<span class="sd">Now, the `&quot;self&quot;` link can be used when exporting the object as a dictionary:</span>
 
 <span class="sd">```pycon</span>
 <span class="sd">&gt;&gt;&gt; guido.jsonapi_dict(</span>
@@ -339,8 +316,8 @@ dump by passing a dictionary to the <code>relationships</code> parameter.</p>
 
 <span class="sd">```</span>
 
-<span class="sd">Then, when you export an article, you can specify the relationships you want to</span>
-<span class="sd">dump by passing a dictionary to the `relationships` parameter.</span>
+<span class="sd">Then, when you export an article, you can indicate the relationships you want</span>
+<span class="sd">to dump by passing a dictionary to the `relationships` parameter.</span>
 
 <span class="sd">```pycon</span>
 
@@ -369,7 +346,7 @@ dump by passing a dictionary to the <code>relationships</code> parameter.</p>
 
 <span class="sd">## Complete reference</span>
 
-<span class="sd">For a more complete reference about resources, go to `jsonapy.base` module.</span>
+<span class="sd">For a more complete reference about resources, see `jsonapy.base` module.</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 

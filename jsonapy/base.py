@@ -2,7 +2,7 @@
 # This library is licensed under the MIT license
 # For a complete copy of the license, see the LICENSE file.
 
-"""# Complete reference of resource creation
+""" # Complete reference of resource creation
 
 ## Fields
 
@@ -16,14 +16,16 @@ class MyResource(BaseResource):
    attr2: bool
 ```
 
-You must specify the `id` field, even if it is only used for identification
+You must annotate the `id` member, even if it is only used for identification
 prupose and not considered as an attribute.
 
-An field cannot be named after reserved names that are:
+A field cannot be named after reserved names which are:
 - the already-defined members of the `BaseResource` class;
 - `"type"`, reserved identifier object member. By default, the type name of
- the resource is the name of the class. You can override it by specifying
- the meta resource_name attribute
+ the resource is the name of the class. It can be can overwritten by specifying
+ the meta `resource_name` attribute
+- `"links"`: a member name used by the JSON:API specification.
+- `"relationships"`: a member name used by the JSON:API specification.
 
 ```python
 class NamedResource(BaseResource):
@@ -35,8 +37,8 @@ class NamedResource(BaseResource):
 
 ## Link registering
 
-To integrate the endpoints of an API in the resources, you can register links
-factories function that will be used to produce resource's links. It can be
+To integrate the endpoints of an API in the resources, you can register
+factories functions that will be used to produce resource's links. It can be
 done in two ways:
 
 - If the factory function does not use any dependency, it can be defined
@@ -100,10 +102,10 @@ This inner class allows you to define several metadata
 - `resource_name`: the resource type name
 - `identifier_meta_fields`: a set containing extra non standard fields that
   contain extra meta-information.
-- `links_factories`: a dictonary containing factories functions to generate
-  resources links when they are exported. The keys are the names of the links
-  and the values their factories functions. The functions take the id of the
-  exported object as unique argument and return an URL string.
+- `links_factories`: a dictonary containing factories functions used to
+  generate resources links when they are exported. The keys are the names of
+  the links and the values their factories functions. The functions take the
+  id of the exported object as unique argument and return an URL string.
 
 During runtime, these metadata can be accessed by the special names
 `__is_abstract__`, `__resource_name__`, `__identifier_meta_fields__` and
@@ -112,9 +114,10 @@ is not accessible during runtime.
 
 ### Atomic and relationships fields
 
-When a field is a instance of `BaseResource`, it is considered as a relationship field.
-The other fields are considered as "atomic": the `id` used for identification, and
-the attributes that are exported in the `"attributes"` object.
+When a field is a instance of `BaseResource`, it is considered as a
+relationship field. The other fields are considered as "atomic": the `id` used
+for identification, and the attributes that are exported in the `"attributes"`
+object.
 
 Some special attributes provide the sets of atomic and relationships fields names.
 
@@ -151,9 +154,10 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
-__all__ = ("BaseResource", "BaseResourceMeta")
-
 from jsonapy import utils
+
+
+__all__ = ("BaseResource", "BaseResourceMeta")
 
 IdType = TypeVar("IdType")
 

@@ -2,6 +2,11 @@
 # This library is licensed under the MIT license
 # For a complete copy of the license, see the LICENSE file.
 
+""" # Utilitarian functions
+
+This module defines utilitarian members used in the library.
+"""
+
 
 def snake_to_camel_case(text: str) -> str:
     """Convert a snake_case string into camelCase format.
