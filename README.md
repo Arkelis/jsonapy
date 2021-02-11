@@ -5,6 +5,11 @@
 `jsonapy` is a Python library for dumping models into
 [JSON:API-compliant]("https://jsonapi.org/") JSON.
 
+[![PyPi](https://img.shields.io/pypi/v/jsonapy?label=PyPi)](https://pypi.org/project/jsonapy/)
+[![Python Version](https://img.shields.io/pypi/pyversions/jsonapy?label=Python)](https://pypi.org/project/jsonapy/)
+![Tests & coverage](https://github.com/Arkelis/jsonapy/workflows/Tests%20&%20coverage/badge.svg)
+[![codecov](https://codecov.io/gh/Arkelis/jsonapy/branch/master/graph/badge.svg?token=ZRF5RAF8NG)](https://codecov.io/gh/Arkelis/jsonapy)
+
 ## Installation
 
 With `pip`:
