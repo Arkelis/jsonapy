@@ -19,6 +19,7 @@ pytest = "^5.2"
 black = "*"
 ipython = "*"
 pdoc = "*"
+pytest-cov = "^2.11.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
