@@ -259,8 +259,6 @@ class BaseResource(metaclass=BaseResourceMeta):
     See the top of the `jsonapy.base` module for an overview documentation.
 
     This class is instantiated by the `BaseResourceMeta` metaclass.
-    This class contains public methods only. See the `_BaseResource` base class
-    for the underlying implementation.
     """
 
     if TYPE_CHECKING:
