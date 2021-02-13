@@ -456,19 +456,19 @@ object.</p>
         <span class="p">}</span>
 
         <span class="n">links_factories</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">factory</span> <span class="ow">in</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links_factories&quot;</span><span class="p">,</span> <span class="p">{}):</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">factory</span> <span class="ow">in</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links_factories&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">split_name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">split_name</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">relationship_name</span> <span class="o">=</span> <span class="n">split_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">relationship_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__relationships_fields_set__</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">relationship_name</span><span class="si">}</span><span class="s2">&#39; is not a valid relationship for </span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-                <span class="n">links_factories</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">factory</span>
+            <span class="n">links_factories</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">factory</span>
 
         <span class="c1"># meta special attributes</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__links_factories__</span> <span class="o">=</span> <span class="n">links_factories</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__is_abstract__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;is_abstract&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__resource_name__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;resource_name&quot;</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">__identifier_meta_fields__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;identifier_meta_fields&quot;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">__identifier_meta_fields__</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;identifier_meta_fields&quot;</span><span class="p">,</span> <span class="nb">set</span><span class="p">()))</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__is_abstract__</span> <span class="ow">and</span> <span class="s2">&quot;id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__annotations__</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;A Resource must have an &#39;id&#39; attribute.&quot;</span><span class="p">)</span>
@@ -733,7 +733,7 @@ object.</p>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
                 <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Unexpected required attribute: &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;    Unexpected required attribute: &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
                     <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">unexpected_attributes</span>
                 <span class="p">)</span>
             <span class="p">)</span>
@@ -1035,7 +1035,7 @@ object.</p>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
                 <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Unexpected required attribute: &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;    Unexpected required attribute: &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
                     <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">unexpected_attributes</span>
                 <span class="p">)</span>
             <span class="p">)</span>
@@ -1248,7 +1248,7 @@ related resource.</li>
     required_attributes: Union[Iterable[str], Literal[&#39;__all__&#39;]],
     links: Union[Dict, NoneType] = None,
     relationships: Union[Dict, NoneType] = None,
-    dump_function: Callable[[Dict], str] = &lt;function dumps at 0x7f59ee206e50&gt;
+    dump_function: Callable[[Dict], str] = &lt;function dumps at 0x7f22a9d16e50&gt;
 ) -&gt; str</span>:
     </div>
 
@@ -1466,19 +1466,19 @@ resource has an <code>"author"</code> relationship attribute, you can register
         <span class="p">}</span>
 
         <span class="n">links_factories</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">factory</span> <span class="ow">in</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links_factories&quot;</span><span class="p">,</span> <span class="p">{}):</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">factory</span> <span class="ow">in</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links_factories&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">split_name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">split_name</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">relationship_name</span> <span class="o">=</span> <span class="n">split_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">relationship_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__relationships_fields_set__</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">relationship_name</span><span class="si">}</span><span class="s2">&#39; is not a valid relationship for </span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-                <span class="n">links_factories</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">factory</span>
+            <span class="n">links_factories</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">factory</span>
 
         <span class="c1"># meta special attributes</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__links_factories__</span> <span class="o">=</span> <span class="n">links_factories</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__is_abstract__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;is_abstract&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__resource_name__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;resource_name&quot;</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">__identifier_meta_fields__</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;identifier_meta_fields&quot;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">__identifier_meta_fields__</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;identifier_meta_fields&quot;</span><span class="p">,</span> <span class="nb">set</span><span class="p">()))</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__is_abstract__</span> <span class="ow">and</span> <span class="s2">&quot;id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__annotations__</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;A Resource must have an &#39;id&#39; attribute.&quot;</span><span class="p">)</span>

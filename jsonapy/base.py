@@ -229,19 +229,19 @@ class BaseResourceMeta(type):
         }
 
         links_factories = {}
-        for name, factory in meta.get("links_factories", {}):
+        for name, factory in meta.get("links_factories", {}).items():
             split_name = name.split("__")
             if len(split_name) > 1:
                 relationship_name = split_name[0]
                 if relationship_name not in cls.__relationships_fields_set__:
                     raise ValueError(f"'{relationship_name}' is not a valid relationship for {cls.__name__}.")
-                links_factories[name] = factory
+            links_factories[name] = factory
 
         # meta special attributes
         cls.__links_factories__ = links_factories
         cls.__is_abstract__ = meta.get("is_abstract", False)
         cls.__resource_name__ = meta.get("resource_name", cls.__name__)
-        cls.__identifier_meta_fields__ = meta.get("identifier_meta_fields", set())
+        cls.__identifier_meta_fields__ = set(meta.get("identifier_meta_fields", set()))
 
         if not cls.__is_abstract__ and "id" not in cls.__annotations__:
             raise AttributeError("A Resource must have an 'id' attribute.")
@@ -506,7 +506,7 @@ class BaseResource(metaclass=BaseResourceMeta):
             raise ValueError(
                 "\n"
                 + "\n".join(
-                    f"Unexpected required attribute: '{name}'"
+                    f"    Unexpected required attribute: '{name}'"
                     for name in unexpected_attributes
                 )
             )
