@@ -16,6 +16,7 @@ class ConcreteResource(AbstractResource):
 
     class Meta:
         resource_name = "concrete"
+        identifier_meta_fields = {"gender"}
 
 
 def test_concrete_instantiation():
@@ -36,6 +37,7 @@ def test_not_exported_attribute():
     inst = ConcreteResource(id=1, name="John", lastname="Doe", gender="M")
 
     assert inst.gender == "M"
+    assert inst._identifier_dict == {"type": "concrete", "id": 1, "meta": {"gender": "M"}}
 
 
 def test_reserved_attribute():

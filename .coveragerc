@@ -1,0 +1,12 @@
+# .coveragerc to control coverage.py
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Re-enable the standard pragma
+    pragma: no cover
+
+    # Ignore TYPE_CHECKING type hints
+    if TYPE_CHECKING:
+
+    if __name__ == .__main__.:

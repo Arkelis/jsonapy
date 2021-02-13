@@ -3,6 +3,10 @@ import pytest
 from jsonapy.base import BaseResource
 
 
+def make_link(x):
+    return str(x)
+
+
 def test_normal_resource_definition():
     class AResource(BaseResource):
         id: int
@@ -46,12 +50,14 @@ def test_resource_without_id():
     assert str(err.value) == "A Resource must have an 'id' attribute."
 
 
-def test_abstract_resource():
+def test_resource_with_meta_attributes():
     class AbstractResource(BaseResource):
         class Meta:
             is_abstract = True
+            identifier_meta_fields = ["a", "b"]
 
     assert AbstractResource.__is_abstract__
+    assert AbstractResource.__identifier_meta_fields__ == {"a", "b"}
 
 
 def test_concrete_inheriting_from_abstract():
@@ -70,17 +76,37 @@ def test_concrete_inheriting_from_abstract():
     assert ConcreteRes.__relationships_fields_set__ == set()
 
 
+def test_linked_resource():
+    class NamedResource(BaseResource):
+        id: int
+
+        class Meta:
+            links_factories = {"self": make_link}
+
+    assert NamedResource.__links_factories__["self"] == make_link
+
+
 def test_simple_link_registering():
     class AResource(BaseResource):
         id: int
 
-    # define trivial function simulating URL factoring
-    def link_factory(res_id):
-        return str(res_id)
+    AResource.register_link_factory("self", make_link)
 
-    AResource.register_link_factory("self", link_factory)
+    assert AResource.__links_factories__ == {"self": make_link}
 
-    assert AResource.__links_factories__ == {"self": link_factory}
+
+def test_relationship_link():
+    class AResource(BaseResource):
+        id: int
+
+    class BResource(BaseResource):
+        id: int
+        rel: AResource
+
+        class Meta:
+            links_factories = {"rel__related": make_link}
+
+    assert BResource.__links_factories__ == {"rel__related": make_link}
 
 
 def test_relationship_link_registering():
@@ -91,22 +117,27 @@ def test_relationship_link_registering():
         id: int
         rel: AResource
 
-    def link_factory(res_id):
-        return str(res_id)
+    BResource.register_link_factory("rel__related", make_link)
 
-    BResource.register_link_factory("rel__related", link_factory)
+    assert BResource.__links_factories__ == {"rel__related": make_link}
 
-    assert BResource.__links_factories__ == {"rel__related": link_factory}
+
+def test_invalid_relationship_link():
+    with pytest.raises(ValueError) as err:
+        class AResource(BaseResource):
+            id: int
+
+            class Meta:
+                links_factories = {"rel__related": make_link}
+
+    assert str(err.value) == "'rel' is not a valid relationship for AResource."
 
 
 def test_invalid_relationship_link_registering():
     class AResource(BaseResource):
         id: int
 
-    def link_factory(res_id):
-        return str(res_id)
-
     with pytest.raises(ValueError) as err:
-        AResource.register_link_factory("rel__related", link_factory)
+        AResource.register_link_factory("rel__related", make_link)
 
     assert str(err.value) == "'rel' is not a valid relationship for AResource."

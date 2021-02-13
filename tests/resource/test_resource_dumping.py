@@ -64,6 +64,11 @@ def related_object(more_object: MoreAttributes) -> RelatedResource:
     return RelatedResource(related_more=more_object, id=2, foo="bar")
 
 
+@pytest.fixture
+def related_object_none() -> RelatedResource:
+    return RelatedResource(related_more=None, id=3, foo="baz")
+
+
 def test_simple_dumping(simple_object: SimpleResource):
     expected = {
         "type": "less",
@@ -93,6 +98,16 @@ def test_simple_dumping_with_link(simple_object: SimpleResource):
     ) == expected
 
 
+def test_invalid_link(simple_object: SimpleResource):
+    with pytest.raises(ValueError) as err:
+        simple_object.jsonapi_dict(
+            required_attributes="__all__",
+            links={"invalid"}
+        )
+
+    assert str(err.value) == "\n    'invalid' is not a registered link name."
+
+
 def test_simple_dumping_with_filtered_attrs(more_object: MoreAttributes):
     expected = {
         "type": "more",
@@ -100,6 +115,23 @@ def test_simple_dumping_with_filtered_attrs(more_object: MoreAttributes):
         "attributes": {"birthDate": 1991},
     }
     assert more_object.jsonapi_dict(required_attributes=["birth_date"]) == expected
+
+
+def test_simple_dumping_unexpected_attribute(more_object: MoreAttributes):
+    with pytest.raises(ValueError) as err:
+        more_object.jsonapi_dict(required_attributes=["invalid"])
+
+    assert str(err.value) == "\n    Unexpected required attribute: 'invalid'"
+
+
+def test_invalid_relationship(simple_object: SimpleResource):
+    with pytest.raises(ValueError) as err:
+        simple_object.jsonapi_dict(
+            required_attributes="__all__",
+            relationships={"foo": {"data": True}},
+        )
+
+    assert str(err.value) == "\n    'foo' is not a valid relationship."
 
 
 def test_relationship_with_identifier_only(related_object: RelatedResource):
@@ -147,16 +179,6 @@ def test_relationship_with_link_only(related_object: RelatedResource):
     )
 
 
-def test_relationship_with_nothing(related_object: RelatedResource):
-    with pytest.raises(ValueError) as err:
-        related_object.jsonapi_dict(
-            required_attributes="__all__",
-            relationships={"related_more": {"foo": "bar"}}
-        )
-
-    assert str(err.value) == "\n    You must provide at least links or data for the 'related_more' relationship."
-
-
 def test_relationship_with_data_and_link(related_object: RelatedResource):
     expected = {
         "type": "related",
@@ -176,6 +198,34 @@ def test_relationship_with_data_and_link(related_object: RelatedResource):
         )
         == expected
     )
+
+
+def test_relationship_none(related_object_none: RelatedResource):
+    expected = {
+        "type": "related",
+        "id": 3,
+        "attributes": {"foo": "baz"},
+        "relationships": {
+            "related_more": None
+        }
+    }
+    assert (
+        related_object_none.jsonapi_dict(
+            required_attributes="__all__",
+            relationships={"related_more": {"data": True, "links": {"related"}}}
+        )
+        == expected
+    )
+
+
+def test_relationship_with_nothing(related_object: RelatedResource):
+    with pytest.raises(ValueError) as err:
+        related_object.jsonapi_dict(
+            required_attributes="__all__",
+            relationships={"related_more": {"foo": "bar"}}
+        )
+
+    assert str(err.value) == "\n    You must provide at least links or data for the 'related_more' relationship."
 
 
 def test_str_dump(related_object: RelatedResource):
