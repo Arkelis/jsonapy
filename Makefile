@@ -12,3 +12,5 @@ tests:
 coverage: tests
 	@coverage html && xdg-open htmlcov/index.html
 
+clean:
+	@rm -rf htmlcov .coverage coverage.xml
