@@ -142,8 +142,10 @@ class BResource(BaseResource):
 ```
 """
 
-
+import collections.abc
+import itertools
 import json
+import typing
 from typing import Callable
 from typing import Dict
 from typing import Iterable
@@ -225,7 +227,7 @@ class BaseResourceMeta(type):
         cls.__relationships_fields_set__ = {
             name
             for name, type_ in annotations_items
-            if isinstance(type_, BaseResourceMeta)
+            if utils.is_a_resource_type_hint(type_, mcs)
         }
 
         links_factories = {}
@@ -291,9 +293,17 @@ class BaseResource(metaclass=BaseResourceMeta):
         """
         errors = []
         for name in kwargs:
-            if hasattr(self, name) or name in self._forbidden_fields:
+            if (
+                hasattr(self, name) and name not in self.__fields_types__
+                or name in self._forbidden_fields
+            ):
                 errors.append(f"    This attribute name is reserved: '{name}'.")
-        missing_arguments = set(self.__fields_types__) - set(kwargs)
+        not_passed_arguments = set(self.__fields_types__) - set(kwargs)
+        missing_arguments = {
+            arg
+            for arg in not_passed_arguments
+            if typing.get_origin(self.__fields_types__) is not Optional
+        }
         if missing_arguments:
             errors.extend(f"    Missing argument: '{arg}'." for arg in missing_arguments)
         if errors:
@@ -479,6 +489,8 @@ class BaseResource(metaclass=BaseResourceMeta):
         Check if the passed names are keys of the __links_factories__ speciak
         attribute. If at least a name is not present, raise a `ValueError`.
         """
+        if not links:  # None or empty:
+            return
         links = {cls._qualname(name, relationship) for name in links}
         errors = []
         for name in links:
@@ -520,19 +532,42 @@ class BaseResource(metaclass=BaseResourceMeta):
         """Format relationships into the JSON:API format."""
         relationships_dict = {}
         for name, rel_payload in relationships.items():
-            related_object: BaseResource = self.__dict__[name]
-            if related_object is None:
-                relationships_dict[name] = None
+            multiple_relationship = utils.is_a_multiple_relationship_type_hint(self.__fields_types__[name])
+            rel_value: Union[Iterable[BaseResource], BaseResource] = self.__dict__[name]
+            if not rel_value:  # None or empty
+                relationships_dict[name] = [] if multiple_relationship else None
                 continue
-            rel_data = {}
-            if rel_payload.get("data"):
-                rel_data["data"] = related_object._identifier_dict
-            relationships_link = rel_payload.get("links")
-            if relationships_link is not None:
-                self._validate_links(rel_payload["links"], relationship=name)
-                rel_data["links"] = self._make_links(rel_payload["links"], relationship=name)
+            relationship_links = rel_payload.get("links")
+            data_is_required = rel_payload.get("data")
+            self._validate_links(relationship_links, relationship=name)
+            rel_data = (
+                [self._relationship_dict(rel, data_is_required, relationship_links, name)
+                 for rel in rel_value]
+                if multiple_relationship
+                else self._relationship_dict(rel_value, data_is_required, relationship_links, name)
+            )
             relationships_dict[name] = rel_data
         return relationships_dict
+
+    def _relationship_dict(
+        self,
+        related_object: "BaseResource",
+        data_is_required: bool,
+        relationship_links: Set[str],
+        relationship_name
+    ):
+        """Make a single relationship object.
+
+        Return a relationship object containing:
+        - data if needed
+        - links if needed
+        """
+        rel_data = {}
+        if data_is_required:
+            rel_data["data"] = related_object._identifier_dict
+        if relationship_links:
+            rel_data["links"] = self._make_links(relationship_links, relationship=relationship_name)
+        return rel_data
 
     def _make_links(self, links: Iterable[str], relationship: Optional[str] = None):
         return {

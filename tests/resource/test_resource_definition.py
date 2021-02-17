@@ -1,9 +1,16 @@
+from collections import Iterable
+from typing import Optional
+
 import pytest
 
 from jsonapy.base import BaseResource
 
 
 def make_link(x):
+    return str(x)
+
+
+def make_link2(x):
     return str(x)
 
 
@@ -29,16 +36,25 @@ def test_named_resource():
     assert NamedResource.__resource_name__ == "named"
 
 
-def test_resource_definition_with_relationship():
+def test_resource_definition_with_relationships():
     class AResource(BaseResource):
         id: int
 
     class BResource(BaseResource):
         id: int
         rel: AResource
+        opt_rel: Optional[AResource]
+        it_rel: Iterable[AResource]
+        opt_it_rel: Optional[Iterable[AResource]]
 
-    assert BResource.__relationships_fields_set__ == {"rel"}
-    assert BResource.__fields_types__ == {"id": int, "rel": AResource}
+    assert BResource.__relationships_fields_set__ == {"rel", "opt_rel", "it_rel", "opt_it_rel"}
+    assert BResource.__fields_types__ == {
+        "id": int,
+        "rel": AResource,
+        "opt_rel": Optional[AResource],
+        "it_rel": Iterable[AResource],
+        "opt_it_rel": Optional[Iterable[AResource]],
+    }
 
 
 def test_resource_without_id():
@@ -77,22 +93,15 @@ def test_concrete_inheriting_from_abstract():
 
 
 def test_linked_resource():
-    class NamedResource(BaseResource):
+    class AResource(BaseResource):
         id: int
 
         class Meta:
             links_factories = {"self": make_link}
 
-    assert NamedResource.__links_factories__["self"] == make_link
+    AResource.register_link_factory("other_link", make_link2)
 
-
-def test_simple_link_registering():
-    class AResource(BaseResource):
-        id: int
-
-    AResource.register_link_factory("self", make_link)
-
-    assert AResource.__links_factories__ == {"self": make_link}
+    assert AResource.__links_factories__ == {"self": make_link, "other_link": make_link2}
 
 
 def test_relationship_link():
@@ -106,20 +115,9 @@ def test_relationship_link():
         class Meta:
             links_factories = {"rel__related": make_link}
 
-    assert BResource.__links_factories__ == {"rel__related": make_link}
+    BResource.register_link_factory("rel__self", make_link2)
 
-
-def test_relationship_link_registering():
-    class AResource(BaseResource):
-        id: int
-
-    class BResource(BaseResource):
-        id: int
-        rel: AResource
-
-    BResource.register_link_factory("rel__related", make_link)
-
-    assert BResource.__links_factories__ == {"rel__related": make_link}
+    assert BResource.__links_factories__ == {"rel__related": make_link, "rel__self": make_link2}
 
 
 def test_invalid_relationship_link():
