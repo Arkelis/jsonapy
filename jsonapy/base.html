@@ -369,8 +369,10 @@ object.</p>
 <span class="sd">```</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-
+<span class="kn">import</span> <span class="nn">collections.abc</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">typing</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span>
@@ -447,12 +449,12 @@ object.</p>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__atomic_fields_set__</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">name</span>
             <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">annotations_items</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">BaseResourceMeta</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">utils</span><span class="o">.</span><span class="n">is_a_resource_type_hint</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">mcs</span><span class="p">)</span>
         <span class="p">}</span> <span class="o">-</span> <span class="n">forbidden_fields</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__relationships_fields_set__</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">name</span>
             <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">annotations_items</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">BaseResourceMeta</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">utils</span><span class="o">.</span><span class="n">is_a_resource_type_hint</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">mcs</span><span class="p">)</span>
         <span class="p">}</span>
 
         <span class="n">links_factories</span> <span class="o">=</span> <span class="p">{}</span>
@@ -514,13 +516,21 @@ object.</p>
 
 <span class="sd">        Take keyword arguments only and raise a `ValueError` if a parameter</span>
 <span class="sd">        tries to reassign an already defined member (like the `jsonapi_dict()`</span>
-<span class="sd">        method).</span>
+<span class="sd">        method) or if a non-optional argument is not provided.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forbidden_fields</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span>
+                <span class="ow">or</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forbidden_fields</span>
+            <span class="p">):</span>
                 <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    This attribute name is reserved: &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
-        <span class="n">missing_arguments</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">not_passed_arguments</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">missing_arguments</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">arg</span>
+            <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">not_passed_arguments</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">utils</span><span class="o">.</span><span class="n">is_an_optional_field</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span><span class="p">[</span><span class="n">arg</span><span class="p">])</span>
+        <span class="p">}</span>
         <span class="k">if</span> <span class="n">missing_arguments</span><span class="p">:</span>
             <span class="n">errors</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Missing argument: &#39;</span><span class="si">{</span><span class="n">arg</span><span class="si">}</span><span class="s2">&#39;.&quot;</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">missing_arguments</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
@@ -577,8 +587,10 @@ object.</p>
         <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__resource_name__</span><span class="p">,</span>
             <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-            <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">),</span>
         <span class="p">}</span>
+        <span class="n">filtered_attributes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">filtered_attributes</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filtered_attributes</span>
         <span class="k">if</span> <span class="n">links</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
             <span class="n">data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
@@ -706,6 +718,8 @@ object.</p>
 <span class="sd">        Check if the passed names are keys of the __links_factories__ speciak</span>
 <span class="sd">        attribute. If at least a name is not present, raise a `ValueError`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">links</span><span class="p">:</span>  <span class="c1"># None or empty:</span>
+            <span class="k">return</span>
         <span class="n">links</span> <span class="o">=</span> <span class="p">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">_qualname</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">relationship</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">links</span><span class="p">}</span>
         <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">links</span><span class="p">:</span>
@@ -747,19 +761,42 @@ object.</p>
         <span class="sd">&quot;&quot;&quot;Format relationships into the JSON:API format.&quot;&quot;&quot;</span>
         <span class="n">relationships_dict</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">rel_payload</span> <span class="ow">in</span> <span class="n">relationships</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">related_object</span><span class="p">:</span> <span class="n">BaseResource</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">related_object</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">relationships_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">multiple_relationship</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">is_a_multiple_relationship_type_hint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+            <span class="n">rel_value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="n">BaseResource</span><span class="p">],</span> <span class="n">BaseResource</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">rel_value</span><span class="p">:</span>  <span class="c1"># None or empty</span>
+                <span class="n">relationships_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">multiple_relationship</span> <span class="k">else</span> <span class="kc">None</span>
                 <span class="k">continue</span>
-            <span class="n">rel_data</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="k">if</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">):</span>
-                <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">related_object</span><span class="o">.</span><span class="n">_identifier_dict</span>
-            <span class="n">relationships_link</span> <span class="o">=</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">relationships_link</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">rel_payload</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">],</span> <span class="n">relationship</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
-                <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">rel_payload</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">],</span> <span class="n">relationship</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">relationship_links</span> <span class="o">=</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span>
+            <span class="n">data_is_required</span> <span class="o">=</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">relationship_links</span><span class="p">,</span> <span class="n">relationship</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">rel_data</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_relationship_dict</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="n">data_is_required</span><span class="p">,</span> <span class="n">relationship_links</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">rel_value</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">multiple_relationship</span>
+                <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relationship_dict</span><span class="p">(</span><span class="n">rel_value</span><span class="p">,</span> <span class="n">data_is_required</span><span class="p">,</span> <span class="n">relationship_links</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="p">)</span>
             <span class="n">relationships_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">rel_data</span>
         <span class="k">return</span> <span class="n">relationships_dict</span>
+
+    <span class="k">def</span> <span class="nf">_relationship_dict</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">related_object</span><span class="p">:</span> <span class="s2">&quot;BaseResource&quot;</span><span class="p">,</span>
+        <span class="n">data_is_required</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">relationship_links</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">relationship_name</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make a single relationship object.</span>
+
+<span class="sd">        Return a relationship object containing:</span>
+<span class="sd">        - data if needed</span>
+<span class="sd">        - links if needed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rel_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">data_is_required</span><span class="p">:</span>
+            <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">related_object</span><span class="o">.</span><span class="n">_identifier_dict</span>
+        <span class="k">if</span> <span class="n">relationship_links</span><span class="p">:</span>
+            <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">relationship_links</span><span class="p">,</span> <span class="n">relationship</span><span class="o">=</span><span class="n">relationship_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rel_data</span>
 
     <span class="k">def</span> <span class="nf">_make_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">links</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">relationship</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">{</span>
@@ -816,13 +853,21 @@ object.</p>
 
 <span class="sd">        Take keyword arguments only and raise a `ValueError` if a parameter</span>
 <span class="sd">        tries to reassign an already defined member (like the `jsonapi_dict()`</span>
-<span class="sd">        method).</span>
+<span class="sd">        method) or if a non-optional argument is not provided.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forbidden_fields</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span>
+                <span class="ow">or</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forbidden_fields</span>
+            <span class="p">):</span>
                 <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    This attribute name is reserved: &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
-        <span class="n">missing_arguments</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">not_passed_arguments</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">missing_arguments</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">arg</span>
+            <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">not_passed_arguments</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">utils</span><span class="o">.</span><span class="n">is_an_optional_field</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span><span class="p">[</span><span class="n">arg</span><span class="p">])</span>
+        <span class="p">}</span>
         <span class="k">if</span> <span class="n">missing_arguments</span><span class="p">:</span>
             <span class="n">errors</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Missing argument: &#39;</span><span class="si">{</span><span class="n">arg</span><span class="si">}</span><span class="s2">&#39;.&quot;</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">missing_arguments</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
@@ -879,8 +924,10 @@ object.</p>
         <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__resource_name__</span><span class="p">,</span>
             <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-            <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">),</span>
         <span class="p">}</span>
+        <span class="n">filtered_attributes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">filtered_attributes</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filtered_attributes</span>
         <span class="k">if</span> <span class="n">links</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
             <span class="n">data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
@@ -1008,6 +1055,8 @@ object.</p>
 <span class="sd">        Check if the passed names are keys of the __links_factories__ speciak</span>
 <span class="sd">        attribute. If at least a name is not present, raise a `ValueError`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">links</span><span class="p">:</span>  <span class="c1"># None or empty:</span>
+            <span class="k">return</span>
         <span class="n">links</span> <span class="o">=</span> <span class="p">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">_qualname</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">relationship</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">links</span><span class="p">}</span>
         <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">links</span><span class="p">:</span>
@@ -1049,19 +1098,42 @@ object.</p>
         <span class="sd">&quot;&quot;&quot;Format relationships into the JSON:API format.&quot;&quot;&quot;</span>
         <span class="n">relationships_dict</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">rel_payload</span> <span class="ow">in</span> <span class="n">relationships</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">related_object</span><span class="p">:</span> <span class="n">BaseResource</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">related_object</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">relationships_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">multiple_relationship</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">is_a_multiple_relationship_type_hint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+            <span class="n">rel_value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="n">BaseResource</span><span class="p">],</span> <span class="n">BaseResource</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">rel_value</span><span class="p">:</span>  <span class="c1"># None or empty</span>
+                <span class="n">relationships_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">multiple_relationship</span> <span class="k">else</span> <span class="kc">None</span>
                 <span class="k">continue</span>
-            <span class="n">rel_data</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="k">if</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">):</span>
-                <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">related_object</span><span class="o">.</span><span class="n">_identifier_dict</span>
-            <span class="n">relationships_link</span> <span class="o">=</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">relationships_link</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">rel_payload</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">],</span> <span class="n">relationship</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
-                <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">rel_payload</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">],</span> <span class="n">relationship</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">relationship_links</span> <span class="o">=</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;links&quot;</span><span class="p">)</span>
+            <span class="n">data_is_required</span> <span class="o">=</span> <span class="n">rel_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">relationship_links</span><span class="p">,</span> <span class="n">relationship</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">rel_data</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_relationship_dict</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="n">data_is_required</span><span class="p">,</span> <span class="n">relationship_links</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">rel_value</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">multiple_relationship</span>
+                <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relationship_dict</span><span class="p">(</span><span class="n">rel_value</span><span class="p">,</span> <span class="n">data_is_required</span><span class="p">,</span> <span class="n">relationship_links</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="p">)</span>
             <span class="n">relationships_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">rel_data</span>
         <span class="k">return</span> <span class="n">relationships_dict</span>
+
+    <span class="k">def</span> <span class="nf">_relationship_dict</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">related_object</span><span class="p">:</span> <span class="s2">&quot;BaseResource&quot;</span><span class="p">,</span>
+        <span class="n">data_is_required</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">relationship_links</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">relationship_name</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make a single relationship object.</span>
+
+<span class="sd">        Return a relationship object containing:</span>
+<span class="sd">        - data if needed</span>
+<span class="sd">        - links if needed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rel_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">data_is_required</span><span class="p">:</span>
+            <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">related_object</span><span class="o">.</span><span class="n">_identifier_dict</span>
+        <span class="k">if</span> <span class="n">relationship_links</span><span class="p">:</span>
+            <span class="n">rel_data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">relationship_links</span><span class="p">,</span> <span class="n">relationship</span><span class="o">=</span><span class="n">relationship_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rel_data</span>
 
     <span class="k">def</span> <span class="nf">_make_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">links</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">relationship</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">{</span>
@@ -1093,13 +1165,21 @@ object.</p>
 
 <span class="sd">        Take keyword arguments only and raise a `ValueError` if a parameter</span>
 <span class="sd">        tries to reassign an already defined member (like the `jsonapi_dict()`</span>
-<span class="sd">        method).</span>
+<span class="sd">        method) or if a non-optional argument is not provided.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forbidden_fields</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span>
+                <span class="ow">or</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forbidden_fields</span>
+            <span class="p">):</span>
                 <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    This attribute name is reserved: &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
-        <span class="n">missing_arguments</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">not_passed_arguments</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">missing_arguments</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">arg</span>
+            <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">not_passed_arguments</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">utils</span><span class="o">.</span><span class="n">is_an_optional_field</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fields_types__</span><span class="p">[</span><span class="n">arg</span><span class="p">])</span>
+        <span class="p">}</span>
         <span class="k">if</span> <span class="n">missing_arguments</span><span class="p">:</span>
             <span class="n">errors</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Missing argument: &#39;</span><span class="si">{</span><span class="n">arg</span><span class="si">}</span><span class="s2">&#39;.&quot;</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">missing_arguments</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
@@ -1114,7 +1194,7 @@ object.</p>
 
 <p>Take keyword arguments only and raise a <code>ValueError</code> if a parameter
 tries to reassign an already defined member (like the <code>jsonapi_dict()</code>
-method).</p>
+method) or if a non-optional argument is not provided.</p>
 </div>
 
 
@@ -1179,8 +1259,10 @@ method).</p>
         <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__resource_name__</span><span class="p">,</span>
             <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
-            <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">),</span>
         <span class="p">}</span>
+        <span class="n">filtered_attributes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filtered_attributes</span><span class="p">(</span><span class="n">required_attributes</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">filtered_attributes</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">filtered_attributes</span>
         <span class="k">if</span> <span class="n">links</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_validate_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
             <span class="n">data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_links</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
@@ -1248,7 +1330,7 @@ related resource.</li>
     required_attributes: Union[Iterable[str], Literal[&#39;__all__&#39;]],
     links: Union[Dict, NoneType] = None,
     relationships: Union[Dict, NoneType] = None,
-    dump_function: Callable[[Dict], str] = &lt;function dumps at 0x7f22a9d16e50&gt;
+    dump_function: Callable[[Dict], str] = &lt;function dumps at 0x7f2c072a2e50&gt;
 ) -&gt; str</span>:
     </div>
 
@@ -1457,12 +1539,12 @@ resource has an <code>"author"</code> relationship attribute, you can register
         <span class="bp">cls</span><span class="o">.</span><span class="n">__atomic_fields_set__</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">name</span>
             <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">annotations_items</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">BaseResourceMeta</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">utils</span><span class="o">.</span><span class="n">is_a_resource_type_hint</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">mcs</span><span class="p">)</span>
         <span class="p">}</span> <span class="o">-</span> <span class="n">forbidden_fields</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">__relationships_fields_set__</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">name</span>
             <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">annotations_items</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">BaseResourceMeta</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">utils</span><span class="o">.</span><span class="n">is_a_resource_type_hint</span><span class="p">(</span><span class="n">type_</span><span class="p">,</span> <span class="n">mcs</span><span class="p">)</span>
         <span class="p">}</span>
 
         <span class="n">links_factories</span> <span class="o">=</span> <span class="p">{}</span>
