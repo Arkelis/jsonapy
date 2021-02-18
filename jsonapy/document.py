@@ -6,7 +6,7 @@
 
 > **WIP:** This module is under construction
 """
-
+import collections.abc
 from typing import Dict
 from typing import Iterable
 from typing import Literal
@@ -15,6 +15,7 @@ from typing import Set
 from typing import Union
 
 from jsonapy import BaseResource
+from jsonapy import base
 
 
 class JSONAPIDocument:
@@ -28,7 +29,17 @@ class JSONAPIDocument:
         included: Optional[Dict] = None
     ):
         # store data
-        self.data = data
+        if isinstance(data, collections.abc.Iterable):
+            if all(isinstance(obj, BaseResource) for obj in data):
+                self.single = False
+            else:
+                raise TypeError("Data must be resource objets.")
+        elif isinstance(data, base.BaseResource):
+            self.single = True
+        else:
+            raise ValueError("Data must be a resource object.")
+        self.data: Union[Iterable[BaseResource], BaseResource] = data
+
 
         # data-dumping-related attributes
         self.data_export_options = {
@@ -38,14 +49,20 @@ class JSONAPIDocument:
         }
 
         # document-duming-related attributes
+        # links
         self.links = document_links
+        
+        # related objects inclusion
+        self._validate_inclusion(included)
         self.included = included
 
     def jsonapi_dict(self):
-        try:
-            data = [resource.jsonapi_dict(**self.data_export_options) for resource in self.data]
-        except TypeError as err:
-            if str(err) != f"'{type(self.data).__name__}' object is not iterable":
-                raise
-            data = self.data.jsonapi_dict(**self.data_export_options)
+        data = (
+            [obj.jsonapi_dict(**self.data_export_options) for obj in self.data]
+            if not self.single
+            else self.data.jsonapi_dict(**self.data_export_options)
+        )
         return {"data": data}
+
+    def _validate_inclusion(self, included):
+        ...
