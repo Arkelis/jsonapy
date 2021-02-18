@@ -289,7 +289,7 @@ class BaseResource(metaclass=BaseResourceMeta):
 
         Take keyword arguments only and raise a `ValueError` if a parameter
         tries to reassign an already defined member (like the `jsonapi_dict()`
-        method).
+        method) or if a non-optional argument is not provided.
         """
         errors = []
         for name in kwargs:
@@ -302,7 +302,7 @@ class BaseResource(metaclass=BaseResourceMeta):
         missing_arguments = {
             arg
             for arg in not_passed_arguments
-            if typing.get_origin(self.__fields_types__) is not Optional
+            if not utils.is_an_optional_field(self.__fields_types__[arg])
         }
         if missing_arguments:
             errors.extend(f"    Missing argument: '{arg}'." for arg in missing_arguments)

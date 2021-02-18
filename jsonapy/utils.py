@@ -7,6 +7,7 @@
 This module defines utilitarian members used in the library.
 """
 import collections.abc
+import functools
 import itertools
 import typing
 from typing import Union
@@ -90,3 +91,37 @@ def is_a_multiple_relationship_type_hint(rel_type_hint) -> bool:
     """
     return collections.abc.Iterable in itertools.chain(typing.get_args(rel_type_hint),
                                                        (typing.get_origin(rel_type_hint),))
+
+
+@functools.lru_cache
+def is_an_optional_field(type_hint) -> bool:
+    """Check if typing.Optional wraps the type hint.
+
+    This is an utilitarian function for `jsonapy.base.BaseResource.__init__`.
+
+    ###### Parameters ######
+
+    * `type_hint`: type hint to check
+
+    For a given class `C`, the following expressions is evaluated to `True`:
+
+    ```python
+    is_an_optional_field(Optional[C])
+    ```
+
+    ###### Returned value ######
+
+    `True` in the shown case, `Fasle` otherwise.
+    """
+    origin = typing.get_origin(type_hint)
+    if origin is None:
+        return False
+    type_args = typing.get_args(type_hint)
+    if origin is Union:
+        # in case of Optional field, check if it is Union[..., None]
+        if len(type_args) != 2:
+            return False
+        if type(None) not in type_args:
+            return False
+        return True
+    return False

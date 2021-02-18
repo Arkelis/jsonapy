@@ -1,4 +1,8 @@
+from typing import Any
+from typing import Dict
 from typing import Iterable
+from typing import Optional
+from typing import Union
 
 import pytest
 
@@ -15,6 +19,7 @@ class AbstractResource(BaseResource):
 class ConcreteResource(AbstractResource):
     lastname: str
     id: int
+    optional: Optional[str] = "Default"
 
     class Meta:
         resource_name = "concrete"
@@ -27,10 +32,18 @@ class ConcreteRelated(BaseResource):
     other_concretes: Iterable[ConcreteResource]
 
 
+class ResourceWithComplexAttribute(BaseResource):
+    id: int
+    complex_attr: Union[int, str, bool]
+    union_without_none: Union[int, str]
+    other: Dict[Any, Any]
+
+
 def test_concrete_instantiation():
-    inst = ConcreteResource(id=1, name="John", lastname="Doe")
+    inst = ConcreteResource(id=1, name="John", lastname="Doe", optional="Hello")
 
     assert inst.id == 1
+    assert inst.optional == "Hello"
 
 
 def test_instance_with_relations():
@@ -46,10 +59,27 @@ def test_instance_with_relations():
 
 
 def test_missing_argument():
-    with pytest.raises(ValueError) as err:
-        inst = ConcreteResource(id=1, name="John")
+    # simple check
+    with pytest.raises(ValueError) as err1:
+        inst = ConcreteResource(id=1, optional="Hello", name="John")
 
-    assert str(err.value) == "\n    Missing argument: 'lastname'."
+    # this covers utils.is_an_optional_field
+    with pytest.raises(ValueError) as err2:
+        inst = ResourceWithComplexAttribute()
+
+    assert str(err1.value) == "\n    Missing argument: 'lastname'."
+    assert (
+        "\n    Missing argument: 'other'." in str(err2.value)
+        and "\n    Missing argument: 'complex_attr'." in str(err2.value)
+        and "\n    Missing argument: 'union_without_none'." in str(err2.value)
+        and "\n    Missing argument: 'id'." in str(err2.value)
+    )
+
+
+def test_optional_argument():
+    inst = ConcreteResource(id=1, lastname="Hello", name="John")
+
+    assert inst.optional == "Default"
 
 
 def test_not_exported_attribute():
