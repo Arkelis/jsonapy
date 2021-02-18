@@ -1,5 +1,10 @@
-from collections import Iterable
+from typing import Generic
+from typing import Iterable
+from typing import List
 from typing import Optional
+from typing import Tuple
+from typing import TypeVar
+from typing import Union
 
 import pytest
 
@@ -54,6 +59,30 @@ def test_resource_definition_with_relationships():
         "opt_rel": Optional[AResource],
         "it_rel": Iterable[AResource],
         "opt_it_rel": Optional[Iterable[AResource]],
+    }
+
+
+def test_resource_definition_with_complex_attributes():
+    class AResource(BaseResource):
+        id: int
+        optional: Optional[str]
+        union_of_three: Union[str, int, Tuple[str, int]]
+        union_of_two: Union[str, int]
+        iterable: Iterable[str]
+        optional_iterable: Optional[Iterable[str]]
+        list: List[int]
+
+    assert AResource.__relationships_fields_set__ == set()
+    assert AResource.__atomic_fields_set__ == {
+        "id", "union_of_two", "union_of_three", "optional", "iterable", "optional_iterable", "list"}
+    assert AResource.__fields_types__ == {
+        "id": int,
+        "optional": Optional[str],
+        "union_of_three": Union[str, int, Tuple[str, int]],
+        "union_of_two": Union[str, int],
+        "iterable": Iterable[str],
+        "optional_iterable": Optional[Iterable[str]],
+        "list": List[int],
     }
 
 

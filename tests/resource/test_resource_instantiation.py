@@ -1,3 +1,5 @@
+from typing import Iterable
+
 import pytest
 
 from jsonapy.base import BaseResource
@@ -19,10 +21,28 @@ class ConcreteResource(AbstractResource):
         identifier_meta_fields = {"gender"}
 
 
+class ConcreteRelated(BaseResource):
+    id: int
+    important_concrete: ConcreteResource
+    other_concretes: Iterable[ConcreteResource]
+
+
 def test_concrete_instantiation():
     inst = ConcreteResource(id=1, name="John", lastname="Doe")
 
     assert inst.id == 1
+
+
+def test_instance_with_relations():
+    important_related = ConcreteResource(id=1, name="Guido", lastname="Van Rossum")
+    others = [
+        ConcreteResource(id=2, name="Fred", lastname="Drake"),
+        ConcreteResource(id=3, name="Georg", lastname="Brandl")
+    ]
+    inst = ConcreteRelated(id=1, important_concrete=important_related, other_concretes=others)
+
+    assert inst.important_concrete == important_related
+    assert inst.other_concretes == others
 
 
 def test_missing_argument():

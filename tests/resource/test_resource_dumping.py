@@ -1,5 +1,6 @@
 import json
 from typing import Callable
+from typing import Iterable
 
 import pytest
 
@@ -29,6 +30,11 @@ class RelatedResource(BaseResource):
 
     class Meta:
         resource_name = "related"
+
+
+class RelatedIterableResource(BaseResource):
+    related_more: Iterable[MoreAttributes]
+    id: int
 
 
 def link_factory(res_name) -> Callable[[str], str]:
@@ -67,6 +73,14 @@ def related_object(more_object: MoreAttributes) -> RelatedResource:
 @pytest.fixture
 def related_object_none() -> RelatedResource:
     return RelatedResource(related_more=None, id=3, foo="baz")
+
+
+@pytest.fixture
+def related_object_iterable() -> RelatedIterableResource:
+    return RelatedIterableResource(related_more=[
+        MoreAttributes(id=1, last_name="Last", name="Name", birth_date=1991),
+        MoreAttributes(id=2, last_name="Last", name="Name", birth_date=1991)
+    ], id=3, foo="baz")
 
 
 def test_simple_dumping(simple_object: SimpleResource):
@@ -211,14 +225,34 @@ def test_relationship_none(related_object_none: RelatedResource):
     }
     assert (
         related_object_none.jsonapi_dict(
-            required_attributes="__all__",
+            required_attributes="__all__",  # __all__ even if no attribute
             relationships={"related_more": {"data": True, "links": {"related"}}}
         )
         == expected
     )
 
 
-def test_relationship_with_nothing(related_object: RelatedResource):
+def test_relationship_iterable(related_object_iterable: RelatedResource):
+    expected = {
+        "type": "RelatedIterableResource",
+        "id": 3,
+        "relationships": {
+            "related_more": [
+                {"data": {"type": "more", "id": 1}},
+                {"data": {"type": "more", "id": 2}},
+            ]
+        }
+    }
+    assert (
+        related_object_iterable.jsonapi_dict(
+            required_attributes="__all__",
+            relationships={"related_more": {"data": True, "links": {}}}
+        )
+        == expected
+    )
+
+
+def test_relationship_invalid_options(related_object: RelatedResource):
     with pytest.raises(ValueError) as err:
         related_object.jsonapi_dict(
             required_attributes="__all__",

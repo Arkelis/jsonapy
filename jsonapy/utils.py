@@ -61,8 +61,6 @@ def is_a_resource_type_hint(type_hint, mcs) -> bool:
         return is_a_resource_type_hint(type_args[0], mcs)
     if origin is collections.abc.Iterable:
         # in case of an iterable, check if it is a BaseResource
-        if len(type_args) != 1:
-            return False
         return is_a_resource_type_hint(type_args[0], mcs)
     return False
 

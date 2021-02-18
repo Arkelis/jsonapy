@@ -222,7 +222,7 @@ class BaseResourceMeta(type):
         cls.__atomic_fields_set__ = {
             name
             for name, type_ in annotations_items
-            if not isinstance(type_, BaseResourceMeta)
+            if not utils.is_a_resource_type_hint(type_, mcs)
         } - forbidden_fields
         cls.__relationships_fields_set__ = {
             name
@@ -360,8 +360,10 @@ class BaseResource(metaclass=BaseResourceMeta):
         data = {
             "type": self.__resource_name__,
             "id": self.id,
-            "attributes": self._filtered_attributes(required_attributes),
         }
+        filtered_attributes = self._filtered_attributes(required_attributes)
+        if filtered_attributes:
+            data["attributes"] = filtered_attributes
         if links:
             self._validate_links(links)
             data["links"] = self._make_links(links)
