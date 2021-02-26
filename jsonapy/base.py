@@ -542,12 +542,15 @@ class BaseResource(metaclass=BaseResourceMeta):
             relationship_links = rel_payload.get("links")
             data_is_required = rel_payload.get("data")
             self._validate_links(relationship_links, relationship=name)
-            rel_data = (
-                [self._relationship_dict(rel, data_is_required, relationship_links, name)
-                 for rel in rel_value]
-                if multiple_relationship
-                else self._relationship_dict(rel_value, data_is_required, relationship_links, name)
-            )
+            rel_data = {}
+            if data_is_required:
+                rel_data["data"] = (
+                    [rel._identifier_dict for rel in rel_value]
+                    if multiple_relationship
+                    else rel_value._identifier_dict
+                )
+            if relationship_links:
+                rel_data["links"] = self._make_links(relationship_links, relationship=name)
             relationships_dict[name] = rel_data
         return relationships_dict
 

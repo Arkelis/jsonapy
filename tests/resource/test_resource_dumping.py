@@ -237,10 +237,10 @@ def test_relationship_iterable(related_object_iterable: RelatedResource):
         "type": "RelatedIterableResource",
         "id": 3,
         "relationships": {
-            "related_more": [
-                {"data": {"type": "more", "id": 1}},
-                {"data": {"type": "more", "id": 2}},
-            ]
+            "related_more": {
+                "data": [{"type": "more", "id": 1},
+                         {"type": "more", "id": 2}],
+            }
         }
     }
     assert (
