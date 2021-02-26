@@ -39,10 +39,10 @@
                     <a class="function" href="#is_a_resource_type_hint">is_a_resource_type_hint</a>
             </li>
             <li>
-                    <a class="function" href="#is_a_multiple_relationship_type_hint">is_a_multiple_relationship_type_hint</a>
+                    <a class="function" href="#is_an_optional_field">is_an_optional_field</a>
             </li>
             <li>
-                    <a class="function" href="#is_an_optional_field">is_an_optional_field</a>
+                    <a class="function" href="#getattr_or_none">getattr_or_none</a>
             </li>
     </ul>
 
@@ -80,6 +80,7 @@
 <span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">import</span> <span class="nn">typing</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
 
 
 <span class="k">def</span> <span class="nf">snake_to_camel_case</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -135,31 +136,32 @@
     <span class="k">return</span> <span class="kc">False</span>
 
 
-<span class="k">def</span> <span class="nf">is_a_multiple_relationship_type_hint</span><span class="p">(</span><span class="n">rel_type_hint</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Check if typing.Iterable wraps the relationship type hint.</span>
-
-<span class="sd">    This is an utilitarian function for `BaseResourceMeta`.</span>
-
-<span class="sd">    ###### Parameters ######</span>
-
-<span class="sd">    * `rel_type_hint`: type hint to check</span>
-
-<span class="sd">    For a given class `C`, all following expressions are evaluated to `True`:</span>
-
-<span class="sd">    ```python</span>
-<span class="sd">    is_a_multiple_relationship_type_hint(Iterable[C])</span>
-<span class="sd">    is_a_multiple_relationship_type_hint(Optional[Iterable[C]])</span>
-<span class="sd">    ```</span>
-
-<span class="sd">    This does not check that the passed hint concerns a valid resource (see</span>
-<span class="sd">    `is_a_resource_type_hint()`).</span>
-
-<span class="sd">    ###### Returned value ######</span>
-
-<span class="sd">    `True` in the shown cases, `Fasle` otherwise.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">collections</span><span class="o">.</span><span class="n">abc</span><span class="o">.</span><span class="n">Iterable</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="n">typing</span><span class="o">.</span><span class="n">get_args</span><span class="p">(</span><span class="n">rel_type_hint</span><span class="p">),</span>
-                                                       <span class="p">(</span><span class="n">typing</span><span class="o">.</span><span class="n">get_origin</span><span class="p">(</span><span class="n">rel_type_hint</span><span class="p">),))</span>
+<span class="c1"># def is_a_multiple_relationship_type_hint(rel_type_hint) -&gt; bool:</span>
+<span class="c1">#     &quot;&quot;&quot;Check if typing.Iterable wraps the relationship type hint.</span>
+<span class="c1">#</span>
+<span class="c1">#     This is an utilitarian function for `BaseResourceMeta`.</span>
+<span class="c1">#</span>
+<span class="c1">#     ###### Parameters ######</span>
+<span class="c1">#</span>
+<span class="c1">#     * `rel_type_hint`: type hint to check</span>
+<span class="c1">#</span>
+<span class="c1">#     For a given class `C`, all following expressions are evaluated to `True`:</span>
+<span class="c1">#</span>
+<span class="c1">#     ```python</span>
+<span class="c1">#     is_a_multiple_relationship_type_hint(Iterable[C])</span>
+<span class="c1">#     is_a_multiple_relationship_type_hint(Optional[Iterable[C]])</span>
+<span class="c1">#     ```</span>
+<span class="c1">#</span>
+<span class="c1">#     This does not check that the passed hint concerns a valid resource (see</span>
+<span class="c1">#     `is_a_resource_type_hint()`).</span>
+<span class="c1">#</span>
+<span class="c1">#     ###### Returned value ######</span>
+<span class="c1">#</span>
+<span class="c1">#     `True` in the shown cases, `Fasle` otherwise.</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     return (collections.abc.Iterable is typing.get_origin(rel_type_hint)</span>
+<span class="c1">#             or (collections.abc.Iterable</span>
+<span class="c1">#                 in (typing.get_origin(tp) for tp in typing.get_args(rel_type_hint))))</span>
 
 
 <span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span>
@@ -194,6 +196,13 @@
             <span class="k">return</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="kc">True</span>
     <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span> <span class="nf">getattr_or_none</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">attr</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
 </pre></div>
 
         </details>
@@ -311,71 +320,6 @@ are evaluated to <code>True</code>:</p>
 
 
                 </section>
-                <section id="is_a_multiple_relationship_type_hint">
-                            <div class="attr function"><a class="headerlink" href="#is_a_multiple_relationship_type_hint">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">is_a_multiple_relationship_type_hint</span><span class="signature">(rel_type_hint) -&gt; bool</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">is_a_multiple_relationship_type_hint</span><span class="p">(</span><span class="n">rel_type_hint</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Check if typing.Iterable wraps the relationship type hint.</span>
-
-<span class="sd">    This is an utilitarian function for `BaseResourceMeta`.</span>
-
-<span class="sd">    ###### Parameters ######</span>
-
-<span class="sd">    * `rel_type_hint`: type hint to check</span>
-
-<span class="sd">    For a given class `C`, all following expressions are evaluated to `True`:</span>
-
-<span class="sd">    ```python</span>
-<span class="sd">    is_a_multiple_relationship_type_hint(Iterable[C])</span>
-<span class="sd">    is_a_multiple_relationship_type_hint(Optional[Iterable[C]])</span>
-<span class="sd">    ```</span>
-
-<span class="sd">    This does not check that the passed hint concerns a valid resource (see</span>
-<span class="sd">    `is_a_resource_type_hint()`).</span>
-
-<span class="sd">    ###### Returned value ######</span>
-
-<span class="sd">    `True` in the shown cases, `Fasle` otherwise.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">collections</span><span class="o">.</span><span class="n">abc</span><span class="o">.</span><span class="n">Iterable</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="n">typing</span><span class="o">.</span><span class="n">get_args</span><span class="p">(</span><span class="n">rel_type_hint</span><span class="p">),</span>
-                                                       <span class="p">(</span><span class="n">typing</span><span class="o">.</span><span class="n">get_origin</span><span class="p">(</span><span class="n">rel_type_hint</span><span class="p">),))</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Check if typing.Iterable wraps the relationship type hint.</p>
-
-<p>This is an utilitarian function for <code>BaseResourceMeta</code>.</p>
-
-<h6 id="parameters">Parameters</h6>
-
-<ul>
-<li><code>rel_type_hint</code>: type hint to check</li>
-</ul>
-
-<p>For a given class <code>C</code>, all following expressions are evaluated to <code>True</code>:</p>
-
-<div class="codehilite"><pre><span></span><code><span class="n">is_a_multiple_relationship_type_hint</span><span class="p">(</span><span class="n">Iterable</span><span class="p">[</span><span class="n">C</span><span class="p">])</span>
-<span class="n">is_a_multiple_relationship_type_hint</span><span class="p">(</span><span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="n">C</span><span class="p">]])</span>
-</code></pre></div>
-
-<p>This does not check that the passed hint concerns a valid resource (see
-<code><a href="#is_a_resource_type_hint">is_a_resource_type_hint()</a></code>).</p>
-
-<h6 id="returned-value">Returned value</h6>
-
-<p><code>True</code> in the shown cases, <code>Fasle</code> otherwise.</p>
-</div>
-
-
-                </section>
                 <section id="is_an_optional_field">
                             <div class="attr function"><a class="headerlink" href="#is_an_optional_field">#&nbsp;&nbsp</a>
 
@@ -443,6 +387,28 @@ are evaluated to <code>True</code>:</p>
 <p><code>True</code> in the shown case, <code>Fasle</code> otherwise.</p>
 </div>
 
+
+                </section>
+                <section id="getattr_or_none">
+                            <div class="attr function"><a class="headerlink" href="#getattr_or_none">#&nbsp;&nbsp</a>
+
+        
+            <span class="def">def</span>
+            <span class="name">getattr_or_none</span><span class="signature">(obj: Any, attr: str)</span>:
+    </div>
+
+                <details>
+            <summary>View Source</summary>
+            <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">getattr_or_none</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">attr</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+</pre></div>
+
+        </details>
+
+    
 
                 </section>
     </main>
