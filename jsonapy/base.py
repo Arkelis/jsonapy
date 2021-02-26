@@ -143,6 +143,7 @@ class BResource(BaseResource):
 """
 
 import collections.abc
+import copy
 import itertools
 import json
 import typing
@@ -298,14 +299,6 @@ class BaseResource(metaclass=BaseResourceMeta):
                 or name in self._forbidden_fields
             ):
                 errors.append(f"    This attribute name is reserved: '{name}'.")
-        not_passed_arguments = set(self.__fields_types__) - set(kwargs)
-        missing_arguments = {
-            arg
-            for arg in not_passed_arguments
-            if not utils.is_an_optional_field(self.__fields_types__[arg])
-        }
-        if missing_arguments:
-            errors.extend(f"    Missing argument: '{arg}'." for arg in missing_arguments)
         if errors:
             raise ValueError("\n" + "\n".join(errors))
         for k, v in kwargs.items():
@@ -357,6 +350,8 @@ class BaseResource(metaclass=BaseResourceMeta):
         related resource.
         - A link name of a specified relationship is not registered.
         """
+        if not hasattr(self, "id"):
+            raise AttributeError(f"This '{self.__class__.__name__}' object has no id.")
         data = {
             "type": self.__resource_name__,
             "id": self.id,
@@ -516,17 +511,20 @@ class BaseResource(metaclass=BaseResourceMeta):
         if required_attributes == "__all__":
             required_attributes = self.__atomic_fields_set__
         unexpected_attributes = set(required_attributes) - self.__atomic_fields_set__
-        if unexpected_attributes:
-            raise ValueError(
-                "\n"
-                + "\n".join(
-                    f"    Unexpected required attribute: '{name}'"
-                    for name in unexpected_attributes
-                )
-            )
+        errors = []
+        attrs = {name: utils.getattr_or_none(self, name) for name in required_attributes}
+        for name in required_attributes:
+            if name not in self.__atomic_fields_set__:
+                errors.append(f"    Unexpected required attribute: '{name}'.")
+                continue
+            if attrs.get(name) is None:
+                if not utils.is_an_optional_field(self.__fields_types__[name]):
+                    errors.append(f"    Missing required attribute: '{name}'.")
+        if errors:
+            raise ValueError("\n" + "\n".join(errors))
         return {
             utils.snake_to_camel_case(k): v
-            for (k, v) in self.__dict__.items()
+            for (k, v) in attrs.items()
             if k in set(required_attributes) - self._identifier_fields
         }
 
@@ -534,8 +532,8 @@ class BaseResource(metaclass=BaseResourceMeta):
         """Format relationships into the JSON:API format."""
         relationships_dict = {}
         for name, rel_payload in relationships.items():
-            multiple_relationship = utils.is_a_multiple_relationship_type_hint(self.__fields_types__[name])
             rel_value: Union[Iterable[BaseResource], BaseResource] = self.__dict__[name]
+            multiple_relationship = isinstance(rel_value, collections.abc.Iterable)
             if not rel_value:  # None or empty
                 relationships_dict[name] = [] if multiple_relationship else None
                 continue
@@ -554,25 +552,25 @@ class BaseResource(metaclass=BaseResourceMeta):
             relationships_dict[name] = rel_data
         return relationships_dict
 
-    def _relationship_dict(
-        self,
-        related_object: "BaseResource",
-        data_is_required: bool,
-        relationship_links: Set[str],
-        relationship_name
-    ):
-        """Make a single relationship object.
-
-        Return a relationship object containing:
-        - data if needed
-        - links if needed
-        """
-        rel_data = {}
-        if data_is_required:
-            rel_data["data"] = related_object._identifier_dict
-        if relationship_links:
-            rel_data["links"] = self._make_links(relationship_links, relationship=relationship_name)
-        return rel_data
+    # def _relationship_dict(
+    #     self,
+    #     related_object: "BaseResource",
+    #     data_is_required: bool,
+    #     relationship_links: Set[str],
+    #     relationship_name
+    # ):
+    #     """Make a single relationship object.
+    #
+    #     Return a relationship object containing:
+    #     - data if needed
+    #     - links if needed
+    #     """
+    #     rel_data = {}
+    #     if data_is_required:
+    #         rel_data["data"] = related_object._identifier_dict
+    #     if relationship_links:
+    #         rel_data["links"] = self._make_links(relationship_links, relationship=relationship_name)
+    #     return rel_data
 
     def _make_links(self, links: Iterable[str], relationship: Optional[str] = None):
         return {

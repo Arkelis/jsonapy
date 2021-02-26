@@ -1,6 +1,10 @@
 import json
+from typing import Any
 from typing import Callable
+from typing import Dict
 from typing import Iterable
+from typing import Optional
+from typing import Union
 
 import pytest
 
@@ -18,6 +22,8 @@ class SimpleResource(BaseResource):
 class MoreAttributes(SimpleResource):
     last_name: str
     birth_date: int
+    optional_attr: Optional[str]
+    default_attr: Optional[str] = "default"
 
     class Meta:
         resource_name = "more"
@@ -35,6 +41,14 @@ class RelatedResource(BaseResource):
 class RelatedIterableResource(BaseResource):
     related_more: Iterable[MoreAttributes]
     id: int
+
+
+class ResourceWithComplexAttribute(BaseResource):
+    id: int
+    simple_attr: str
+    complex_attr: Union[int, str, bool]
+    union_without_none: Union[int, str]
+    other: Dict[Any, Any]
 
 
 def link_factory(res_name) -> Callable[[str], str]:
@@ -81,6 +95,11 @@ def related_object_iterable() -> RelatedIterableResource:
         MoreAttributes(id=1, last_name="Last", name="Name", birth_date=1991),
         MoreAttributes(id=2, last_name="Last", name="Name", birth_date=1991)
     ], id=3, foo="baz")
+
+
+@pytest.fixture
+def empty_object() -> ResourceWithComplexAttribute:
+    return ResourceWithComplexAttribute()
 
 
 def test_simple_dumping(simple_object: SimpleResource):
@@ -131,11 +150,47 @@ def test_simple_dumping_with_filtered_attrs(more_object: MoreAttributes):
     assert more_object.jsonapi_dict(required_attributes=["birth_date"]) == expected
 
 
+def test_simple_dumping_optional_attr(more_object: MoreAttributes):
+    expected = {
+        "type": "more",
+        "id": 1,
+        "attributes": {
+            "birthDate": 1991,
+            "optionalAttr": None,
+            "defaultAttr": "default"}}
+
+    assert (more_object.jsonapi_dict(
+                required_attributes=["birth_date", "optional_attr", "default_attr"])
+            == expected)
+
+
 def test_simple_dumping_unexpected_attribute(more_object: MoreAttributes):
     with pytest.raises(ValueError) as err:
         more_object.jsonapi_dict(required_attributes=["invalid"])
 
-    assert str(err.value) == "\n    Unexpected required attribute: 'invalid'"
+    assert str(err.value) == "\n    Unexpected required attribute: 'invalid'."
+
+
+def test_dumping_without_id(empty_object: ResourceWithComplexAttribute):
+    with pytest.raises(AttributeError) as err:
+        empty_object.jsonapi_dict("__all__")
+
+    assert str(err.value) == "This 'ResourceWithComplexAttribute' object has no id."
+
+
+def test_missing_argument(empty_object: ResourceWithComplexAttribute):
+    empty_object.id = 1
+
+    # this covers utils.is_an_optional_field
+    with pytest.raises(ValueError) as err:
+        empty_object.jsonapi_dict("__all__")
+
+    assert (
+        "Missing required attribute: 'other'." in str(err.value)
+        and "Missing required attribute: 'complex_attr'." in str(err.value)
+        and "Missing required attribute: 'union_without_none'." in str(err.value)
+        and "Missing required attribute: 'simple_attr'." in str(err.value)
+    )
 
 
 def test_invalid_relationship(simple_object: SimpleResource):

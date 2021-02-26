@@ -11,6 +11,7 @@ import functools
 import itertools
 import typing
 from typing import Union
+from typing import Any
 
 
 def snake_to_camel_case(text: str) -> str:
@@ -66,32 +67,32 @@ def is_a_resource_type_hint(type_hint, mcs) -> bool:
     return False
 
 
-def is_a_multiple_relationship_type_hint(rel_type_hint) -> bool:
-    """Check if typing.Iterable wraps the relationship type hint.
-
-    This is an utilitarian function for `BaseResourceMeta`.
-
-    ###### Parameters ######
-
-    * `rel_type_hint`: type hint to check
-
-    For a given class `C`, all following expressions are evaluated to `True`:
-
-    ```python
-    is_a_multiple_relationship_type_hint(Iterable[C])
-    is_a_multiple_relationship_type_hint(Optional[Iterable[C]])
-    ```
-
-    This does not check that the passed hint concerns a valid resource (see
-    `is_a_resource_type_hint()`).
-
-    ###### Returned value ######
-
-    `True` in the shown cases, `Fasle` otherwise.
-    """
-    return (collections.abc.Iterable is typing.get_origin(rel_type_hint)
-            or (collections.abc.Iterable
-                in (typing.get_origin(tp) for tp in typing.get_args(rel_type_hint))))
+# def is_a_multiple_relationship_type_hint(rel_type_hint) -> bool:
+#     """Check if typing.Iterable wraps the relationship type hint.
+#
+#     This is an utilitarian function for `BaseResourceMeta`.
+#
+#     ###### Parameters ######
+#
+#     * `rel_type_hint`: type hint to check
+#
+#     For a given class `C`, all following expressions are evaluated to `True`:
+#
+#     ```python
+#     is_a_multiple_relationship_type_hint(Iterable[C])
+#     is_a_multiple_relationship_type_hint(Optional[Iterable[C]])
+#     ```
+#
+#     This does not check that the passed hint concerns a valid resource (see
+#     `is_a_resource_type_hint()`).
+#
+#     ###### Returned value ######
+#
+#     `True` in the shown cases, `Fasle` otherwise.
+#     """
+#     return (collections.abc.Iterable is typing.get_origin(rel_type_hint)
+#             or (collections.abc.Iterable
+#                 in (typing.get_origin(tp) for tp in typing.get_args(rel_type_hint))))
 
 
 @functools.lru_cache
@@ -126,3 +127,10 @@ def is_an_optional_field(type_hint) -> bool:
             return False
         return True
     return False
+
+
+def getattr_or_none(obj: Any, attr: str):
+    try:
+        return getattr(obj, attr)
+    except AttributeError:
+        return None
