@@ -577,3 +577,11 @@ class BaseResource(metaclass=BaseResourceMeta):
             name: self.__links_factories__[self._qualname(name, relationship)](self.id)
             for name in links
         }
+
+    ###########################################################################
+    #                     S P E C I A L   M E T H O D S                       #
+    ###########################################################################
+
+    def __repr__(self):
+        return (f"{self.__class__.__name__}"
+                f"({', '.join(f'{k}={repr(v)}' for k, v in self.__dict__.items())})")
