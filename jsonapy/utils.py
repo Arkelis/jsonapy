@@ -89,8 +89,9 @@ def is_a_multiple_relationship_type_hint(rel_type_hint) -> bool:
 
     `True` in the shown cases, `Fasle` otherwise.
     """
-    return collections.abc.Iterable in itertools.chain(typing.get_args(rel_type_hint),
-                                                       (typing.get_origin(rel_type_hint),))
+    return (collections.abc.Iterable is typing.get_origin(rel_type_hint)
+            or (collections.abc.Iterable
+                in (typing.get_origin(tp) for tp in typing.get_args(rel_type_hint))))
 
 
 @functools.lru_cache
