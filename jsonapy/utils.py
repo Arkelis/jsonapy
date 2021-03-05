@@ -8,21 +8,33 @@ This module defines utilitarian members used in the library.
 """
 import collections.abc
 import functools
-import itertools
+import re
 import typing
 from typing import Union
-from typing import Any
 
 
 def snake_to_camel_case(text: str) -> str:
     """Convert a snake_case string into camelCase format.
-    This function doesnt check that passed text is in snake case.
+
+    This function doesnt check that passed text is in snake_case.
     """
     first, *others = text.split("_")
     return first + "".join(map(str.capitalize, others))
 
 
-def is_a_resource_type_hint(type_hint, mcs) -> bool:
+def camel_to_snake_case(text: str) -> str:
+    """Convert a camelCase string into snake_case format.
+
+    This function does not check that passed text is in camelCase.
+    See https://stackoverflow.com/a/12867228/9214306
+
+    This version handles simple cases as there is no known complicated case in
+    the application (in the defined models).
+    """
+    return re.sub(r"([A-Z]+)", r"_\1", text).lower()
+
+
+def is_type_hint_instance_of(type_hint, mcs) -> bool:
     """Check if `type_hint` contains a `mcs` instance.
 
     This is an utilitarian function for `BaseResourceMeta`.
@@ -36,12 +48,12 @@ def is_a_resource_type_hint(type_hint, mcs) -> bool:
     are evaluated to `True`:
 
     ```python
-    is_a_resource_type_hint(C, MC)
-    is_a_resource_type_hint(Iterable[C], MC)
-    is_a_resource_type_hint(Optional[C], MC)
-    is_a_resource_type_hint(Union[C, None], MC)
-    is_a_resource_type_hint(Optional[Iterable[C]], MC)
-    is_a_resource_type_hint(Union[Iterable[C], None], MC)
+    is_type_hint_instance_of(C, MC)
+    is_type_hint_instance_of(Iterable[C], MC)
+    is_type_hint_instance_of(Optional[C], MC)
+    is_type_hint_instance_of(Union[C, None], MC)
+    is_type_hint_instance_of(Optional[Iterable[C]], MC)
+    is_type_hint_instance_of(Union[Iterable[C], None], MC)
     ```
 
     ###### Returned value ######
@@ -60,43 +72,41 @@ def is_a_resource_type_hint(type_hint, mcs) -> bool:
             return False
         if type(None) not in type_args:
             return False
-        return is_a_resource_type_hint(type_args[0], mcs)
+        return is_type_hint_instance_of(type_args[0], mcs)
     if origin is collections.abc.Iterable:
         # in case of an iterable, check if it is a BaseResource
-        return is_a_resource_type_hint(type_args[0], mcs)
+        return is_type_hint_instance_of(type_args[0], mcs)
     return False
 
 
-# def is_a_multiple_relationship_type_hint(rel_type_hint) -> bool:
-#     """Check if typing.Iterable wraps the relationship type hint.
-#
-#     This is an utilitarian function for `BaseResourceMeta`.
-#
-#     ###### Parameters ######
-#
-#     * `rel_type_hint`: type hint to check
-#
-#     For a given class `C`, all following expressions are evaluated to `True`:
-#
-#     ```python
-#     is_a_multiple_relationship_type_hint(Iterable[C])
-#     is_a_multiple_relationship_type_hint(Optional[Iterable[C]])
-#     ```
-#
-#     This does not check that the passed hint concerns a valid resource (see
-#     `is_a_resource_type_hint()`).
-#
-#     ###### Returned value ######
-#
-#     `True` in the shown cases, `Fasle` otherwise.
-#     """
-#     return (collections.abc.Iterable is typing.get_origin(rel_type_hint)
-#             or (collections.abc.Iterable
-#                 in (typing.get_origin(tp) for tp in typing.get_args(rel_type_hint))))
+def is_an_iterable_type_hint(rel_type_hint) -> bool:
+    """Check if typing.Iterable wraps the relationship type hint.
+
+    ###### Parameters ######
+
+    * `rel_type_hint`: type hint to check
+
+    For a given class `C`, all following expressions are evaluated to `True`:
+
+    ```python
+    is_an_iterable_type_hint(Iterable[C])
+    is_an_iterable_type_hint(Optional[Iterable[C]])
+    ```
+
+    This does not check that the passed hint concerns a valid resource (see
+    `is_type_hint_instance_of()`).
+
+    ###### Returned value ######
+
+    `True` in the shown cases, `Fasle` otherwise.
+    """
+    return (collections.abc.Iterable is typing.get_origin(rel_type_hint)
+            or (collections.abc.Iterable
+                in (typing.get_origin(tp) for tp in typing.get_args(rel_type_hint))))
 
 
 @functools.lru_cache
-def is_an_optional_field(type_hint) -> bool:
+def is_an_optional_type_hint(type_hint) -> bool:
     """Check if typing.Optional wraps the type hint.
 
     This is an utilitarian function for `jsonapy.base.BaseResource.__init__`.
@@ -108,7 +118,7 @@ def is_an_optional_field(type_hint) -> bool:
     For a given class `C`, the following expressions is evaluated to `True`:
 
     ```python
-    is_an_optional_field(Optional[C])
+    is_an_optional_type_hint(Optional[C])
     ```
 
     ###### Returned value ######
@@ -128,9 +138,3 @@ def is_an_optional_field(type_hint) -> bool:
         return True
     return False
 
-
-def getattr_or_none(obj: Any, attr: str):
-    try:
-        return getattr(obj, attr)
-    except AttributeError:
-        return None
