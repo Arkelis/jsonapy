@@ -155,3 +155,6 @@ For a more complete reference about resources, see `jsonapy.base` module.
 __version__ = "0.1.1"
 
 from .base import BaseResource
+from .functions import fields_types
+from .functions import relationships_names
+from .functions import attributes_names
