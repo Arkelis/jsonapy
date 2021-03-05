@@ -27,6 +27,7 @@ class MoreAttributes(SimpleResource):
 
     class Meta:
         resource_name = "more"
+        meta_attributes = ["meta_attr"]
 
 
 class RelatedResource(BaseResource):
@@ -54,19 +55,22 @@ class ResourceWithComplexAttribute(BaseResource):
 def link_factory(res_name) -> Callable[[str], str]:
     def make_link(res_id) -> str:
         return f"http://example.com/{res_name}/{res_id}"
+
     return make_link
 
 
 def rel_link_factory(res_name, rel_name) -> Callable[[str, str], str]:
     def make_link(res_id) -> str:
         return f"http://example.com/{res_name}/{res_id}/{rel_name}"
+
     return make_link
 
 
 SimpleResource.register_link_factory("self", link_factory(SimpleResource.__resource_name__))
 MoreAttributes.register_link_factory("self", link_factory(MoreAttributes.__resource_name__))
 RelatedResource.register_link_factory("self", link_factory(RelatedResource.__resource_name__))
-RelatedResource.register_link_factory("related_more__related", rel_link_factory(RelatedResource.__resource_name__, "related_more"))
+RelatedResource.register_link_factory("related_more__related",
+                                      rel_link_factory(RelatedResource.__resource_name__, "related_more"))
 
 
 @pytest.fixture
@@ -76,7 +80,7 @@ def simple_object() -> SimpleResource:
 
 @pytest.fixture
 def more_object() -> SimpleResource:
-    return MoreAttributes(id=1, last_name="Last", name="Name", birth_date=1991)
+    return MoreAttributes(id=1, last_name="Last", name="Name", birth_date=1991, meta_attr="a meta attr")
 
 
 @pytest.fixture
@@ -124,21 +128,27 @@ def test_simple_dumping_with_link(simple_object: SimpleResource):
         "links": {"self": "http://example.com/less/0"},
     }
     assert (
-        simple_object.jsonapi_dict(
-            required_attributes="__all__",
-            links={"self"},
-        )
-    ) == expected
+               simple_object.jsonapi_dict(
+                   required_attributes="__all__",
+                   links={"self": {"res_id": simple_object.id}},
+               )
+           ) == expected
 
 
 def test_invalid_link(simple_object: SimpleResource):
     with pytest.raises(ValueError) as err:
         simple_object.jsonapi_dict(
             required_attributes="__all__",
-            links={"invalid"}
+            links={"invalid": {"res_id": simple_object.id},
+                   "self": "Not a dictionary",
+                   "empty": None},
         )
 
-    assert str(err.value) == "\n    'invalid' is not a registered link name."
+    err_msg = str(err.value)
+
+    assert ("Provided 'invalid' link is not a string." in err_msg
+            and "You must provide an arguments dictionary for 'self' link." in err_msg
+            and "Nothing provided for building 'empty' link." in err_msg)
 
 
 def test_simple_dumping_with_filtered_attrs(more_object: MoreAttributes):
@@ -150,17 +160,18 @@ def test_simple_dumping_with_filtered_attrs(more_object: MoreAttributes):
     assert more_object.jsonapi_dict(required_attributes=["birth_date"]) == expected
 
 
-def test_simple_dumping_optional_attr(more_object: MoreAttributes):
+def test_simple_dumping_optional_and_meta_attr(more_object: MoreAttributes):
     expected = {
         "type": "more",
         "id": 1,
         "attributes": {
             "birthDate": 1991,
             "optionalAttr": None,
-            "defaultAttr": "default"}}
+            "defaultAttr": "default"},
+        "meta": {"metaAttr": "a meta attr"}}
 
     assert (more_object.jsonapi_dict(
-                required_attributes=["birth_date", "optional_attr", "default_attr"])
+        required_attributes=["birth_date", "optional_attr", "default_attr", "meta"])
             == expected)
 
 
@@ -238,12 +249,17 @@ def test_relationship_with_link_only(related_object: RelatedResource):
     assert (
         related_object.jsonapi_dict(
             required_attributes="__all__",
-            relationships={"related_more": {"data": False, "links": {"related"}}}
+            relationships={
+                "related_more" :{
+                    "data": False,
+                    "links": {"related": {"res_id": related_object.id}}}}
         )
         == related_object.jsonapi_dict(
             required_attributes="__all__",
-            relationships={"related_more": {"links": {"related"}}}
-        )
+            relationships={
+                "related_more": {
+                    "links": {"related": {"res_id": related_object.id}}}}
+    )
         == expected
     )
 
@@ -263,7 +279,10 @@ def test_relationship_with_data_and_link(related_object: RelatedResource):
     assert (
         related_object.jsonapi_dict(
             required_attributes="__all__",
-            relationships={"related_more": {"data": True, "links": {"related"}}}
+            relationships={
+                "related_more":{
+                    "data": True,
+                    "links": {"related": {"res_id": related_object.id}}}}
         )
         == expected
     )
@@ -324,15 +343,18 @@ def test_str_dump(related_object: RelatedResource):
         "attributes": {"foo": "bar"},
         "relationships": {
             "related_more": {
+                "links": {"related": "http://example.com/related/2/related_more"},
                 "data": {"type": "more", "id": 1},
-                "links": {"related": "http://example.com/related/2/related_more"}
             }
         }
     })
     assert (
         related_object.dump(
             required_attributes="__all__",
-            relationships={"related_more": {"data": True, "links": {"related"}}}
+            relationships={
+                "related_more": {
+                    "data": True,
+                    "links": {"related": {"res_id": related_object.id}}}}
         )
         == expected
     )

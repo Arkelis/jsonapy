@@ -146,14 +146,16 @@ import collections.abc
 import copy
 import itertools
 import json
-import typing
+from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import Literal
+from typing import Mapping
 from typing import Optional
 from typing import Set
 from typing import TYPE_CHECKING
+from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
@@ -163,6 +165,14 @@ from jsonapy import utils
 __all__ = ("BaseResource", "BaseResourceMeta")
 
 IdType = TypeVar("IdType")
+
+
+def validate_link_name(klass, name):
+    split_name = name.split("__")
+    if len(split_name) > 1:
+        relationship_name = split_name[0]
+        if relationship_name not in klass.__relationships_fields_set__:
+            raise ValueError(f"'{relationship_name}' is not a valid relationship for {klass.__name__}.")
 
 
 class BaseResourceMeta(type):
@@ -223,21 +233,17 @@ class BaseResourceMeta(type):
         cls.__atomic_fields_set__ = {
             name
             for name, type_ in annotations_items
-            if not utils.is_a_resource_type_hint(type_, mcs)
+            if not utils.is_type_hint_instance_of(type_, mcs)
         } - forbidden_fields
         cls.__relationships_fields_set__ = {
             name
             for name, type_ in annotations_items
-            if utils.is_a_resource_type_hint(type_, mcs)
+            if utils.is_type_hint_instance_of(type_, mcs)
         }
 
         links_factories = {}
         for name, factory in meta.get("links_factories", {}).items():
-            split_name = name.split("__")
-            if len(split_name) > 1:
-                relationship_name = split_name[0]
-                if relationship_name not in cls.__relationships_fields_set__:
-                    raise ValueError(f"'{relationship_name}' is not a valid relationship for {cls.__name__}.")
+            validate_link_name(cls, name)
             links_factories[name] = factory
 
         # meta special attributes
@@ -245,6 +251,7 @@ class BaseResourceMeta(type):
         cls.__is_abstract__ = meta.get("is_abstract", False)
         cls.__resource_name__ = meta.get("resource_name", cls.__name__)
         cls.__identifier_meta_fields__ = set(meta.get("identifier_meta_fields", set()))
+        cls.__meta_attributes__ = set(meta.get("meta_attributes", set()))
 
         if not cls.__is_abstract__ and "id" not in cls.__annotations__:
             raise AttributeError("A Resource must have an 'id' attribute.")
@@ -294,10 +301,8 @@ class BaseResource(metaclass=BaseResourceMeta):
         """
         errors = []
         for name in kwargs:
-            if (
-                hasattr(self, name) and name not in self.__fields_types__
-                or name in self._forbidden_fields
-            ):
+            if (hasattr(self, name) and name not in self.__fields_types__
+                    or name in self._forbidden_fields):
                 errors.append(f"    This attribute name is reserved: '{name}'.")
         if errors:
             raise ValueError("\n" + "\n".join(errors))
@@ -311,7 +316,7 @@ class BaseResource(metaclass=BaseResourceMeta):
     def jsonapi_dict(
         self,
         required_attributes: Union[Iterable[str], Literal["__all__"]],
-        links: Optional[Iterable[str]] = None,
+        links: Optional[Mapping[str, Union[str, Mapping[str, Any]]]] = None,
         relationships: Optional[Dict] = None,
     ) -> Dict:
         """Export the object as a dictionary in compliance with JSON:API specification.
@@ -356,15 +361,17 @@ class BaseResource(metaclass=BaseResourceMeta):
             "type": self.__resource_name__,
             "id": self.id,
         }
-        filtered_attributes = self._filtered_attributes(required_attributes)
+        filtered_attributes, meta_attributes = self._filtered_attributes(required_attributes)
         if filtered_attributes:
             data["attributes"] = filtered_attributes
-        if links:
-            self._validate_links(links)
-            data["links"] = self._make_links(links)
         if relationships:
             self._validate_relationships(relationships)
             data["relationships"] = self._formatted_relationships(relationships)
+        if links:
+            self._validate_links(links)
+            data["links"] = self._make_links(links)
+        if meta_attributes:
+            data["meta"] = meta_attributes
         return data
 
     def dump(
@@ -423,11 +430,7 @@ class BaseResource(metaclass=BaseResourceMeta):
 
         If the relationship does not exist, raise a `ValueError`.
         """
-        split_name = name.split("__")
-        if len(split_name) > 1:
-            relationship_name = split_name[0]
-            if relationship_name not in cls.__relationships_fields_set__:
-                raise ValueError(f"'{relationship_name}' is not a valid relationship for {cls.__name__}.")
+        validate_link_name(cls, name)
         cls.__links_factories__[name] = factory
 
     ###########################################################################
@@ -483,16 +486,23 @@ class BaseResource(metaclass=BaseResourceMeta):
     def _validate_links(cls, links, relationship: Optional[str] = None):
         """Make sure that the links are registered in the resource class.
 
-        Check if the passed names are keys of the __links_factories__ speciak
-        attribute. If at least a name is not present, raise a `ValueError`.
+        Check if the passed names are keys of the __links_factories__ special
+        attribute. If not, see if the links argument is a dictionary and try
+        to get the value of the keys not present in __links_factories__.
+        If at least one name is not valid, raise a `ValueError`.
         """
-        if not links:  # None or empty:
-            return
-        links = {cls._qualname(name, relationship) for name in links}
         errors = []
         for name in links:
-            if name not in cls.__links_factories__:
-                errors.append(f"    '{name}' is not a registered link name.")
+            qual_name = cls._qualname(name, relationship)
+            if qual_name in cls.__links_factories__:
+                if not isinstance(links[name], Mapping):
+                    errors.append(f"    You must provide an arguments dictionary for '{qual_name}' link.")
+                continue
+            provided_link = links.get(name)
+            if provided_link is None:
+                errors.append(f"    Nothing provided for building '{qual_name}' link.")
+            elif not isinstance(links[name], str):
+                errors.append(f"    Provided '{qual_name}' link is not a string.")
         if errors:
             raise ValueError("\n" + "\n".join(errors))
 
@@ -502,31 +512,37 @@ class BaseResource(metaclass=BaseResourceMeta):
 
     def _filtered_attributes(
         self, required_attributes: Union[Iterable, Literal["__all__"]]
-    ) -> Dict:
+    ) -> Tuple[Dict, Dict]:
         """Filter the attributes with provided `required_attributes` iterable.
 
         If a member of the iterable is not in the annotated attributes, raise a
         `ValueError`. The names are converted from snake case to camel case.
         """
         if required_attributes == "__all__":
-            required_attributes = self.__atomic_fields_set__
-        unexpected_attributes = set(required_attributes) - self.__atomic_fields_set__
+            required_attributes = self.__atomic_fields_set__ | {"meta"}
+        required_attributes = set(required_attributes)
         errors = []
-        attrs = {name: utils.getattr_or_none(self, name) for name in required_attributes}
-        for name in required_attributes:
+        attrs = {name: getattr(self, name, None) for name in required_attributes-{"meta"}}
+        for name in required_attributes - {"meta"}:
             if name not in self.__atomic_fields_set__:
                 errors.append(f"    Unexpected required attribute: '{name}'.")
                 continue
             if attrs.get(name) is None:
-                if not utils.is_an_optional_field(self.__fields_types__[name]):
+                if not utils.is_an_optional_type_hint(self.__fields_types__[name]):
                     errors.append(f"    Missing required attribute: '{name}'.")
         if errors:
             raise ValueError("\n" + "\n".join(errors))
-        return {
+        attrs = {
             utils.snake_to_camel_case(k): v
             for (k, v) in attrs.items()
             if k in set(required_attributes) - self._identifier_fields
         }
+        meta_attrs = {
+            utils.snake_to_camel_case(name): getattr(self, name)
+            for name in self.__meta_attributes__
+            if getattr(self, name) is not None
+        } if "meta" in required_attributes else None
+        return attrs, meta_attrs
 
     def _formatted_relationships(self, relationships: Dict) -> Dict:
         """Format relationships into the JSON:API format."""
@@ -539,17 +555,17 @@ class BaseResource(metaclass=BaseResourceMeta):
                 continue
             relationship_links = rel_payload.get("links")
             data_is_required = rel_payload.get("data")
-            self._validate_links(relationship_links, relationship=name)
             rel_data = {}
+            if relationship_links:
+                self._validate_links(relationship_links, relationship=name)
+                rel_data["links"] = self._make_links(relationship_links, relationship=name)
+            relationships_dict[name] = rel_data
             if data_is_required:
                 rel_data["data"] = (
                     [rel._identifier_dict for rel in rel_value]
                     if multiple_relationship
                     else rel_value._identifier_dict
                 )
-            if relationship_links:
-                rel_data["links"] = self._make_links(relationship_links, relationship=name)
-            relationships_dict[name] = rel_data
         return relationships_dict
 
     # def _relationship_dict(
@@ -572,9 +588,17 @@ class BaseResource(metaclass=BaseResourceMeta):
     #         rel_data["links"] = self._make_links(relationship_links, relationship=relationship_name)
     #     return rel_data
 
-    def _make_links(self, links: Iterable[str], relationship: Optional[str] = None):
+    def _make_links(self,
+                    links: Mapping[str, Union[str, Dict[str, Any]]],
+                    relationship: Optional[str] = None):
+        """Build and return the links dictionary.
+
+        The links are assumed to be valid. See _validate_links() for validation
+        """
         return {
-            name: self.__links_factories__[self._qualname(name, relationship)](self.id)
+            name: self.__links_factories__[self._qualname(name, relationship)](**links[name])
+            if self.__links_factories__.get(self._qualname(name, relationship)) is not None
+            else links[name]
             for name in links
         }
 
@@ -585,3 +609,14 @@ class BaseResource(metaclass=BaseResourceMeta):
     def __repr__(self):
         return (f"{self.__class__.__name__}"
                 f"({', '.join(f'{k}={repr(v)}' for k, v in self.__dict__.items())})")
+
+    def __getattr__(self, name):
+        """Dynamically return None or [] for not-yet-initialized fields"""
+        if name == "id":
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+        type_hint = self.__fields_types__.get(name)
+        if type_hint is None:
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+        if utils.is_an_iterable_type_hint(type_hint):
+            return []
+        return None

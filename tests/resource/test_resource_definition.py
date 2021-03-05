@@ -31,16 +31,6 @@ def test_normal_resource_definition():
     assert AResource.__fields_types__ == {"id": int, "name": str}
 
 
-def test_named_resource():
-    class NamedResource(BaseResource):
-        id: int
-
-        class Meta:
-            resource_name = "named"
-
-    assert NamedResource.__resource_name__ == "named"
-
-
 def test_resource_definition_with_relationships():
     class AResource(BaseResource):
         id: int
@@ -95,14 +85,18 @@ def test_resource_without_id():
     assert str(err.value) == "A Resource must have an 'id' attribute."
 
 
-def test_resource_with_meta_attributes():
+def test_resource_with_basic_meta_attributes():
     class AbstractResource(BaseResource):
         class Meta:
+            resource_name = "customName"
             is_abstract = True
             identifier_meta_fields = ["a", "b"]
+            meta_attributes = ["c", "d"]
 
     assert AbstractResource.__is_abstract__
     assert AbstractResource.__identifier_meta_fields__ == {"a", "b"}
+    assert AbstractResource.__meta_attributes__ == {"c", "d"}
+    assert AbstractResource.__resource_name__ == "customName"
 
 
 def test_concrete_inheriting_from_abstract():
