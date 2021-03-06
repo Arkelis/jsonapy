@@ -90,11 +90,11 @@ def test_resource_with_basic_meta_attributes():
         class Meta:
             resource_name = "customName"
             is_abstract = True
-            identifier_meta_fields = ["a", "b"]
+            identifier_meta_attributes = ["a", "b"]
             meta_attributes = ["c", "d"]
 
     assert AbstractResource.__is_abstract__
-    assert AbstractResource.__identifier_meta_fields__ == {"a", "b"}
+    assert AbstractResource.__identifier_meta_attributes__ == {"a", "b"}
     assert AbstractResource.__meta_attributes__ == {"c", "d"}
     assert AbstractResource.__resource_name__ == "customName"
 

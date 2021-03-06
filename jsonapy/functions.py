@@ -10,44 +10,71 @@ import functools
 from typing import Any
 from typing import Dict
 from typing import Set
+from typing import Type
+from typing import Union
 
-from jsonapy import BaseResource
+from jsonapy.base import BaseResource
+from jsonapy.base import BaseResourceMeta
 
 
 def _check_resource_type(func):
     @functools.wraps(func)
-    def wrapper(resource_instance: BaseResource):
-        if not isinstance(resource_instance, BaseResource):
-            raise TypeError(f"'{resource_instance.__class__.__name__}' object is not a resource object.")
-        return func(resource_instance)
+    def wrapper(resource_instance_or_class: Union[Type[BaseResource], BaseResource]):
+        if (
+            not isinstance(resource_instance_or_class, BaseResource)
+            and not isinstance(resource_instance_or_class, BaseResourceMeta)
+        ):
+            raise TypeError(f"'{resource_instance_or_class.__class__.__name__}' object is not a resource object.")
+        return func(resource_instance_or_class)
     return wrapper
 
 
 @_check_resource_type
-def fields_types(resource_instance: BaseResource) -> Dict[str, Any]:
-    """Return `resource_instance.__fields_types__`
+def fields_types(resource_instance_or_class: Union[Type[BaseResource], BaseResource]) -> Dict[str, Any]:
+    """Return a dictionary of the fields types of the resource.
 
-    `resource_instance` must be a `BaseResource` instance, otherwise a
-    `TypeError` is raised.
+    ###### Returned value ######
+
+    This functions actually returns `resource_instance_or_class.__fields_types__`.
+    (See `jsonapy.base.BaseResourceMeta`.)
+
+    ###### Errors raised ######
+
+    `resource_instance_or_class` must be a `BaseResource` instance or subclass,
+    otherwise a `TypeError` is raised.
     """
-    return resource_instance.__fields_types__
+    return resource_instance_or_class.__fields_types__
 
 
 @_check_resource_type
-def relationships_names(resource_instance: BaseResource) -> Set[str]:
-    """Return `resource_instance.__relationships_fields_set__`
+def relationships_names(resource_instance_or_class: Union[Type[BaseResource], BaseResource]) -> Set[str]:
+    """Return a set containing the relationships names of the resource.
 
-    `resource_instance` must be a `BaseResource` instance, otherwise a
-    `TypeError` is raised.
+    ###### Returned value ######
+
+    This functions actually returns `resource_instance_or_class.__relationships_fields_set__`.
+    (See `jsonapy.base.BaseResourceMeta`.)
+
+    ###### Errors raised ######
+
+    `resource_instance_or_class` must be a `BaseResource` instance or subclass,
+    otherwise a `TypeError` is raised.
     """
-    return resource_instance.__relationships_fields_set__
+    return resource_instance_or_class.__relationships_fields_set__
 
 
 @_check_resource_type
-def attributes_names(resource_instance: BaseResource) -> Set[str]:
-    """Return `resource_instance.__atomic_fields_set__ - {"id"}`
+def attributes_names(resource_instance_or_class: Union[Type[BaseResource], BaseResource]) -> Set[str]:
+    """Return a set containing the attributes names of the resource.
 
-    `resource_instance` must be a `BaseResource` instance, otherwise a
-    `TypeError` is raised.
+    ###### Returned value ######
+
+    This functions actually returns `resource_instance_or_class.__atomic_fields_set__ - {"id"}`.
+    (See `jsonapy.base.BaseResourceMeta`.)
+
+    ###### Errors raised ######
+
+    `resource_instance_or_class` must be a `BaseResource` instance or subclass,
+    otherwise a `TypeError` is raised.
     """
-    return resource_instance.__atomic_fields_set__ - {"id"}
+    return resource_instance_or_class.__atomic_fields_set__ - {"id"}

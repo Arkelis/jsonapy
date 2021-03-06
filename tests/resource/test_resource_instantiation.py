@@ -23,7 +23,7 @@ class ConcreteResource(AbstractResource):
 
     class Meta:
         resource_name = "concrete"
-        identifier_meta_fields = {"gender"}
+        identifier_meta_attributes = {"gender"}
 
 
 class ConcreteRelated(BaseResource):

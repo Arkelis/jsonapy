@@ -12,7 +12,6 @@
 This library is provided under the [MIT License](https://pycolore.mit-license.org),
 its source is hosted on [GitHub](https://github.com/Arkelis/jsonapy).
 
-
 ## Basics
 
 This package lets you define models and dump them into dictionaries with the
@@ -31,60 +30,86 @@ class PersonResource(jsonapy.BaseResource):
         resource_name = "person"
 ```
 
-The `Meta` inner class is used to set the resource name (the `"type"` field).
-Instances of this resource can be now dumped into JSON:API-structured
-dictionaries:
+The `Meta` inner class is used to set some fields-typing-unrelated configuration,
+like the the resource name (the `"type"` field). Instances of this resource
+can be now dumped into JSON:API-structured dictionaries:
 
-```pycon
->>> guido = PersonResource(id=1, first_name="Guido", last_name="Van Rossum")
->>> guido.jsonapi_dict(required_attributes="__all__")
-{'type': 'person',
- 'id': 1,
- 'attributes': {'firstName': 'Guido', 'lastName': 'Van Rossum'}}
+```python
+guido = PersonResource(id=1, first_name="Guido", last_name="Van Rossum")
+guido.jsonapi_dict(required_attributes="__all__")
+
+# {'type': 'person',
+#  'id': 1,
+#  'attributes': {'firstName': 'Guido', 'lastName': 'Van Rossum'}}
 ```
 
 It is also possible to specify the fields to dump in the dictionary.
 
-```pycon
->>> guido.jsonapi_dict(required_attributes=["first_name"])
-{'type': 'person',
- 'id': 1,
- 'attributes': {'firstName': 'Guido'}}
+```python
+guido.jsonapi_dict(required_attributes=["first_name"])
+
+# {'type': 'person',
+#  'id': 1,
+#  'attributes': {'firstName': 'Guido'}}
 ```
 
 Instead of a dictionary, the `dump()` method allows to get a JSON string:
 
-```pycon
->>> guido.dump(required_attributes=["first_name"])
-'{"type": "person", "id": 1, "attributes": {"firstName": "Guido"}}'
+```python
+guido.dump(required_attributes=["first_name"])
+
+# '{"type": "person", "id": 1, "attributes": {"firstName": "Guido"}}'
 ```
 
 ## Links
 
-Resource links can be specified by registering factory functions that will be
-used to generate them using `register_link_factory()` method:
+Resource links can be specified by registering factories functions that will
+be used to generate them using `register_link_factory()` method:
 
-```pycon
->>> PersonResource.register_link_factory("self", lambda id_: f"http://my.api/persons/{id_})
+```python
+PersonResource.register_link_factory("self", lambda x: f"http://my.api/persons/{x})
 ```
 
 Now, the `"self"` link can be used when exporting the object as a dictionary:
 
-```pycon
->>> guido.jsonapi_dict(
-...     links={"self"},
-...     required_attributes="__all__",
-... )
-...
-{
-  'type': 'person',
-  'id': 1,
-  'attributes': {
-    'firstName': 'Guido',
-    'lastName': 'Van Rossum'
-  },
-  'links': {'self': 'http://my.api/persons/1'}
-}
+```python
+guido.jsonapi_dict(
+    links={"self": {"x": guido.id}},
+    required_attributes="__all__",)
+
+# {
+#   'type': 'person',
+#   'id': 1,
+#   'attributes': {
+#     'firstName': 'Guido',
+#     'lastName': 'Van Rossum'
+#   },
+#   'links': {'self': 'http://my.api/persons/1'}
+# }
+```
+
+Links can also be added at dumping time without being registered by providing
+a raw string.
+
+```python
+guido.jsonapi_dict(
+    links={
+        "self": {"x": guido.id},
+        "languages": "http://my.api/persons/1/languages"},
+    required_attributes="__all__",)
+
+# {
+#   'type': 'person',
+#   'id': 1,
+#   'attributes': {
+#     'firstName': 'Guido',
+#     'lastName': 'Van Rossum'
+#   },
+#   'links': {
+#     'self': 'http://my.api/persons/1'
+#     'languages': 'http://my.api/persons/1/languages'
+#   }
+# }
 ```
 
 ## Relationships
@@ -120,35 +145,41 @@ ArticleResource.register_link_factory(
 Then, when you export an article, you can indicate the relationships you want
 to dump by passing a dictionary to the `relationships` parameter.
 
-```pycon
+```python
+zola = PersonResource(id=1, first_name="Emile", last_name="Zola")
+jaccuse = ArticleResource(id=1, title="J'accuse… !", author=zola)
+jaccuse.jsonapi_dict(
+    required_attributes="__all__",
+    links={"self": {"x": jaccuse.id}},
+    relationships={
+        "author": {
+            "data": True,
+            "links": {"related": {"x": jaccuse.id}}}
+)
 
->>> zola = PersonResource(id=1, first_name="Emile", last_name="Zola")
->>> jaccuse = ArticleResource(id=1, title="J'accuse… !", author=zola)
->>> jaccuse.jsonapi_dict(
-...     required_attributes="__all__",
-...     links={"self"},
-...     relationships={"author": {"data": True, "links": {"related"}}
-... )
-...
-{
-  'type': 'article',
-  'id': 1,
-  'attributes': {'title': "J'accuse… !"},
-  'links': {'self': 'http://my.api/articles/1'},
-  'relationships': {
-    'author': {
-      'data': {'type': 'person', 'id': 1},
-      'links': {'related': 'http://my.api/articles/1/author'}
-    }
-  }
-}
+# {
+#   'type': 'article',
+#   'id': 1,
+#   'attributes': {'title': "J'accuse… !"},
+#   'links': {'self': 'http://my.api/articles/1'},
+#   'relationships': {
+#     'author': {
+#       'data': {'type': 'person', 'id': 1},
+#       'links': {'related': 'http://my.api/articles/1/author'}
+#     }
+#   }
+# }
+
 ```
 
+## Accessing metadata about resources
 
-## Complete reference
+The `jsonapy.functions` module provide top level functions for accessing some
+information about resource classes.
+
+## Reference of resource definition
 
 For a more complete reference about resources, see `jsonapy.base` module.
-
 """
 
 

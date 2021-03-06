@@ -2,14 +2,19 @@
 # This library is licensed under the MIT license
 # For a complete copy of the license, see the LICENSE file.
 
-""" # Complete reference of resource creation
+""" # Complete reference of resource definition
 
 ## Fields
+
+### Attributes
 
 You can define the [fields](https://jsonapi.org/format/#document-resource-object-fields)
 to export with annotations:
 
 ```python
+from jsonapy import BaseResource
+
+
 class MyResource(BaseResource):
    id: int
    attr1: str
@@ -17,15 +22,13 @@ class MyResource(BaseResource):
 ```
 
 You must annotate the `id` member, even if it is only used for identification
-prupose and not considered as an attribute.
+and not considered as an attribute.
 
 A field cannot be named after reserved names which are:
 - the already-defined members of the `BaseResource` class;
-- `"type"`, reserved identifier object member. By default, the type name of
+- `"type"`, a reserved identifier object member. By default, the type name of
  the resource is the name of the class. It can be can overwritten by specifying
- the meta `resource_name` attribute
-- `"links"`: a member name used by the JSON:API specification.
-- `"relationships"`: a member name used by the JSON:API specification.
+ the `resource_name` attribute of the `Meta` inner class:
 
 ```python
 class NamedResource(BaseResource):
@@ -34,6 +37,35 @@ class NamedResource(BaseResource):
    class Meta:
         resource_name = "myResourceName"
 ```
+
+- `"links"`: a member name used by the JSON:API specification.
+- `"relationships"`: a member name used by the JSON:API specification.
+
+### Relationships
+
+When a field has a resource class type hint, it is considered as a relationship.
+
+```python
+class MyOtherResource(BaseResource):
+   id: int
+   related_main_resource: MyResource
+```
+
+The `related_main_resource` is a relationship and will be correctly handled
+when dumping the instances. See `BaseResource.jsonapi_dict()` for more the
+documentation on exporting the objects into JSON:API format.
+
+### Meta fields
+
+The `Meta` inner class lets you define non-standard attributes:
+
+* `meta_attributes`: A set of meta attributes names. These attributes will
+be exported in the [`meta`](https://jsonapi.org/format/#document-meta)
+object (alongside `"id"`, `"type"`, `"attributes"`, `"relationships"` and `"links"`).
+* `identifier_meta_attributes`: A set of identifier meta fields names,
+these will be in the `meta` object when exporting
+[resource identifier objects](https://jsonapi.org/format/#document-resource-identifier-objects)
+(alongside `"type"` and `"id"`).
 
 ## Link registering
 
@@ -59,9 +91,22 @@ factories functions can be registered with a class method. For example, if
 you are using [Starlette](https://www.starlette.io/), it could be:
 
 ```python
-# app and routes definitions...
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.routes import Route
+from functools import partial
 
-LinkedResource.register_link_factory("self", lambda x: app.url_path_for("linked_resource", x))
+def linke_resource(request):
+    ...
+
+app = Starlette(debug=True, routes=[
+    Route('/linked/{id}', linked_resources),
+])
+
+def make_link(route, request **path_params):
+    return Request.url_for(request, route, **path_params)
+
+LinkedResource.register_link_factory("self", partial(make_link, "linked_resources"))
 ```
 
 For the relationships links, prefix the links names with the relationship name:
@@ -94,32 +139,7 @@ When a resource subclasses another resource, all fields are copied to the sub-re
 
 ## Special class attributes
 
-### Meta attributes defined in the `Meta` inner class
-
-This inner class allows you to define several metadata
-
-- `is_abstract`: a boolean indicating the model is aimed to be instantiated.
-- `resource_name`: the resource type name
-- `identifier_meta_fields`: a set containing extra non standard fields that
-  contain extra meta-information.
-- `links_factories`: a dictonary containing factories functions used to
-  generate resources links when they are exported. The keys are the names of
-  the links and the values their factories functions. The functions take the
-  id of the exported object as unique argument and return an URL string.
-
-During runtime, these metadata can be accessed by the special names
-`__is_abstract__`, `__resource_name__`, `__identifier_meta_fields__` and
-`__links_factories__` directly on the resource class. The `Meta` inner class
-is not accessible during runtime.
-
-### Atomic and relationships fields
-
-When a field is a instance of `BaseResource`, it is considered as a
-relationship field. The other fields are considered as "atomic": the `id` used
-for identification, and the attributes that are exported in the `"attributes"`
-object.
-
-Some special attributes provide the sets of atomic and relationships fields names.
+These resource classes are used in the following examples.
 
 ```python
 class AResource(BaseResource):
@@ -130,7 +150,59 @@ class BResource(BaseResource):
     id: int
     name: str
     related: AResource
+
+    class Meta:
+        links_factories = {
+            "self": lambda x: f"/b/{x}",
+            "related__self": lambda x: f"/b/{x}/relationships/related"}
 ```
+
+### Accessing resource metadata
+
+Some metadata about a resource can be accessed through top level functions applied on
+a resource class:
+
+```python
+from jsonapy.functions import fields_types, relationships_names, attributes_names
+fields_types(BResource)
+# {'id': int, 'name': str, 'related': __main__.AResource}
+relationships_names(BResource)
+# {'related'}
+attributes_names(BResource)
+# {'name'}
+```
+
+See the `jsonapy.functions` module for more information about these functions
+and refer to the following sections to know more about special metadata class
+attributes.
+
+### Configuration attributes defined in the `Meta` inner class
+
+Summary of attributes which can be defined in the `Meta` inner class:
+
+- `is_abstract`: A boolean indicating the model is aimed to be instantiated.
+- `resource_name`: The resource type name.
+- `meta_attributes`: A set of non-standard attributes names which will be
+   exported in the [`meta`](https://jsonapi.org/format/#document-meta) object.
+- `identifier_meta_attributes`: A set containing extra non standard fields
+   names that contain extra meta-information for identification.
+- `links_factories`: A dictonary containing factories functions used to
+  generate resources links when they are exported. The keys are the names of
+  the links and the values their factories functions.
+
+During runtime, these metadata can be accessed with special attributes directly
+on the resource classes. For example, the value of `is_abstract` is available
+on the `__is_abstract__` attribute. The `Meta` inner class is not accessible
+during runtime.
+
+### Atomic and relationships fields
+
+When a field is a instance of `BaseResource`, it is considered as a
+relationship field. The other fields are considered as "atomic": the `id` used
+for identification, and the attributes that are exported in the `"attributes"`
+object.
+
+Some special attributes provide the sets of atomic and relationships fields names.
 
 ```pycon
 >>> BResource.__fields_types__
@@ -195,11 +267,13 @@ class BaseResourceMeta(type):
     This metaclass converts the `Meta` inner class of the defined models into
     special attributes:
 
-    - `__is_abstract__`: the `Meta.is_abstract` attribute if defined, else `True`.
+    - `__is_abstract__`: the `Meta.is_abstract` attribute if defined, else `False`.
     - `__resource_name__`: the `Meta.resource_name` attribute if defined, else
       the name of the resource class.
-    - `__identifier_meta_fields__`: the `Meta.identifier_meta_fields` attribute
+    - `__identifier_meta_attributes__`: the `Meta.identifier_meta_attributes` attribute
       if defined, else an empty set.
+    - `___meta_attributes__`: the `Meta.meta_attributes` attribute if defined,
+      else an empty set.
     - `__links_factories__`: the `Meta.links_factories` attribute if defined,
       else an empty dictionary. If a link name is not valid, a `ValueError` is
       raised.
@@ -249,7 +323,7 @@ class BaseResourceMeta(type):
         cls.__links_factories__ = links_factories
         cls.__is_abstract__ = meta.get("is_abstract", False)
         cls.__resource_name__ = meta.get("resource_name", cls.__name__)
-        cls.__identifier_meta_fields__ = set(meta.get("identifier_meta_fields", set()))
+        cls.__identifier_meta_attributes__ = set(meta.get("identifier_meta_attributes", set()))
         cls.__meta_attributes__ = set(meta.get("meta_attributes", set()))
 
         if not cls.__is_abstract__ and "id" not in cls.__annotations__:
@@ -265,7 +339,8 @@ class BaseResourceMeta(type):
 class BaseResource(metaclass=BaseResourceMeta):
     """Base class for defining resources.
 
-    See the top of the `jsonapy.base` module for an overview documentation.
+    See the top of the `jsonapy.base` module for a doumentation on resource
+    definition.
 
     This class is instantiated by the `BaseResourceMeta` metaclass.
     """
@@ -277,7 +352,7 @@ class BaseResource(metaclass=BaseResourceMeta):
         __relationships_fields_set__: Set[str]
         __resource_name__: str
         __is_abstract__: bool
-        __identifier_meta_fields__: Set[str]
+        __identifier_meta_attributes__: Set[str]
         __links_factories__: Dict[str, Callable[[IdType], str]]
         _identifier_fields: Set[str]
         _forbidden_fields: Set[str]
@@ -288,15 +363,14 @@ class BaseResource(metaclass=BaseResourceMeta):
     class Meta:
         is_abstract: bool = True
         resource_name: str
-        identifier_meta_fields: Set[str]
+        identifier_meta_attributes: Set[str]
         links_factories: Dict[str, Callable[[IdType], str]]
 
     def __init__(self, **kwargs):
         """Automatically set all passed arguments.
 
         Take keyword arguments only and raise a `ValueError` if a parameter
-        tries to reassign an already defined member (like the `jsonapi_dict()`
-        method) or if a non-optional argument is not provided.
+        tries to reassign an already defined member (like the `jsonapi_dict()`.
         """
         errors = []
         for name in kwargs:
@@ -322,27 +396,24 @@ class BaseResource(metaclass=BaseResourceMeta):
 
         ###### Parameters ######
 
-        - `required_attributes`: a iterable containing the fields names to
+        - `required_attributes`: an iterable containing the fields names to
         include in dumped data. If all fields are required, provide the
         `"__all__"` literal instead of an iterable.
-        - `links`: an iterable of links names to include in data. You must have
-        registered the link names before (see `BaseResource.register_link_factory()`
-        method).
+        - `links`: a dictionary containing links payload to include in data.
+        The keys are the links names to dump, and the values are dictionaries
+        containing keyword arguments to pass to the factory function. Raw strings
+        can also be provided for unregistered links names.
         - `relationships`: a dictionary specifying the relationships to include,
         if the identifier object must be exported, and which links must be dumped.
-        The keys must be a attribute of the resource referencing another resource
-        and the value of each key is another dict containing two keys:
-          + `"data"`: a boolean indicating if an identifier object must be included
-          + `"links"`: an iterable of links names to dump.
-
-        For example, let's say an article is related to an author. The relationships dict could be:
-        ```python
-        {"author": {"data": True, "links": {"self"}}}
-        ```
+        The keys must be the relationships names and the value of each key is
+        another dict containing two keys:
+          + `"data"`: a boolean indicating if an identifier object must be included.
+            If there is identifier meta attributes, they are also exported.
+          + `"links"`: a dictionary in the same shape as the `links` argument.
 
         ###### Returned value ######
 
-        A dictionary representing the object according to the JSON:API
+        A dictionary representing the object in compliance with the JSON:API
         specification.
 
         ###### Errors raised ######
@@ -353,6 +424,46 @@ class BaseResource(metaclass=BaseResourceMeta):
         - A key of the `relationship` argument does not refer to a valid
         related resource.
         - A link name of a specified relationship is not registered.
+
+        ###### Examples ######
+
+        Given
+
+        ```python
+        aresource = AResource(id=1)
+        bresource = BResource(id=1, name="foo", related=aresource)
+        ```
+
+        A classic dump of `bresource` would be:
+
+        ```python
+        bresource.jsonapi_dict(
+            required_attributes="__all__",
+            links={"self": {"x": bresource.id}},
+            relationships={
+                "related":{
+                    "data": True,
+                    "links": {"self": {"x": bresource.id}}}})
+
+        # {'type': 'BResource',
+        #  'id': 1,
+        #  'attributes': {'name': 'foo'},
+        #  'relationships': {'related':
+        #    {'links': {'self': '/b/1/relationships/related'},
+        #     'data': {'type': 'AResource', 'id': 1}}},
+        #  'links': {'self': '/b/1'}}
+        ```
+
+        An export example with a raw string link:
+
+        ```python
+        aresource.jsonapi_dict(
+            "__all__",
+            {"self": f"/a/{aresource.id}"})
+
+        # {'type': 'AResource', 'id': 1, 'links': {'self': '/a/1'}}
+        ```
+
         """
         if not hasattr(self, "id"):
             raise AttributeError(f"This '{self.__class__.__name__}' object has no id.")
@@ -449,8 +560,8 @@ class BaseResource(metaclass=BaseResourceMeta):
             "type": self.__resource_name__,
             "id": self.id,
         }
-        if self.__identifier_meta_fields__:
-            identifier_dict["meta"] = {name: getattr(self, name) for name in self.__identifier_meta_fields__}
+        if self.__identifier_meta_attributes__:
+            identifier_dict["meta"] = {name: getattr(self, name) for name in self.__identifier_meta_attributes__}
         return identifier_dict
 
     @staticmethod
@@ -630,6 +741,24 @@ def create_resource(
     **fields_types
 ) -> Type[BaseResource]:
     """Create dynamically a new resource class.
+
+    ###### Parameters ######
+
+    * `name`: The resource class name.
+    * `meta_conf`: A dictionary containg configuration attributes (of the
+      `Meta` inner class).
+    * `bases`: A tuple containing parent classes.
+    * `metaklass`: The metaclass used to create the resource class (must
+      be a subclass of `BaseResourceMeta`).
+    * `**fields_types`: The types of the fields as keyword arguments.
+
+    ###### Returned value ######
+
+    A new resource class.
+
+    ###### Errors raised ######
+
+    A `TypeError` is raised if `metaklass` is not a subclass of `BaseResourceMeta`.
     """
     if not issubclass(metaklass, BaseResourceMeta):
         raise TypeError(
