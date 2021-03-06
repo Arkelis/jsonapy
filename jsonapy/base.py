@@ -143,8 +143,6 @@ class BResource(BaseResource):
 """
 
 import collections.abc
-import copy
-import itertools
 import json
 from typing import Any
 from typing import Callable
@@ -156,18 +154,19 @@ from typing import Optional
 from typing import Set
 from typing import TYPE_CHECKING
 from typing import Tuple
+from typing import Type
 from typing import TypeVar
 from typing import Union
 
 from jsonapy import utils
 
 
-__all__ = ("BaseResource", "BaseResourceMeta")
+__all__ = ("BaseResource", "create_resource", "BaseResourceMeta")
 
 IdType = TypeVar("IdType")
 
 
-def validate_link_name(klass, name):
+def _validate_link_name(klass, name):
     split_name = name.split("__")
     if len(split_name) > 1:
         relationship_name = split_name[0]
@@ -243,7 +242,7 @@ class BaseResourceMeta(type):
 
         links_factories = {}
         for name, factory in meta.get("links_factories", {}).items():
-            validate_link_name(cls, name)
+            _validate_link_name(cls, name)
             links_factories[name] = factory
 
         # meta special attributes
@@ -430,7 +429,7 @@ class BaseResource(metaclass=BaseResourceMeta):
 
         If the relationship does not exist, raise a `ValueError`.
         """
-        validate_link_name(cls, name)
+        _validate_link_name(cls, name)
         cls.__links_factories__[name] = factory
 
     ###########################################################################
@@ -620,3 +619,23 @@ class BaseResource(metaclass=BaseResourceMeta):
         if utils.is_an_iterable_type_hint(type_hint):
             return []
         return None
+
+
+def create_resource(
+    name: str,
+    meta_conf: Dict[str, Any],
+    bases: Tuple[type] = (),
+    metaklass: type = BaseResourceMeta,
+    /,
+    **fields_types
+) -> Type[BaseResource]:
+    """Create dynamically a new resource class.
+    """
+    if not issubclass(metaklass, BaseResourceMeta):
+        raise TypeError(
+            "Only a submetaclass of BaseResourceMeta can create a new "
+            f"resource class. ('{metaklass}' provided.)")
+
+    meta_inncer_class = type("Meta", (), meta_conf)
+    namespace = {"__annotations__": fields_types, "Meta": meta_inncer_class}
+    return metaklass(name, bases, namespace)
