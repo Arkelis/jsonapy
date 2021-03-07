@@ -64,7 +64,7 @@ guido.dump(required_attributes=["first_name"])
 ## Links
 
 Resource links can be specified by registering factories functions that will
-be used to generate them using `register_link_factory()` method:
+be used to generate them using the `register_link_factory()` method:
 
 ```python
 PersonResource.register_link_factory("self", lambda x: f"http://my.api/persons/{x})
@@ -75,7 +75,7 @@ Now, the `"self"` link can be used when exporting the object as a dictionary:
 ```python
 guido.jsonapi_dict(
     links={"self": {"x": guido.id}},
-    required_attributes="__all__",)
+    required_attributes="__all__")
 
 # {
 #   'type': 'person',
@@ -96,7 +96,7 @@ guido.jsonapi_dict(
     links={
         "self": {"x": guido.id},
         "languages": "http://my.api/persons/1/languages"},
-    required_attributes="__all__",)
+    required_attributes="__all__")
 
 # {
 #   'type': 'person',
@@ -124,22 +124,11 @@ class ArticleResource(jsonapy.BaseResource):
 
     class Meta:
         resource_name = "article"
-
-ArticleResource.register_link_factory(
-    "self",
-    lambda x: f"http://my.api/articles/{x}"
-)
-```
-
-Specify the links for the relationships by prefixing the links name with the
-name of the relationship:
-
-```python
-ArticleResource.register_link_factory(
-    "author__related",
-    lambda x: f"http://my.api/articles/{x}/author"
-)
-
+        # links factories can also be specified in Meta:
+        links_factories = {
+            "self": lambda x: f"http://my.api/articles/{x}",
+            # for relationships, prefix the relationship name
+            "author__related": lambda x: f"http://my.api/articles/{x}/author"}
 ```
 
 Then, when you export an article, you can indicate the relationships you want

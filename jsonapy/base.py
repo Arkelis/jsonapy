@@ -4,6 +4,10 @@
 
 """ # Complete reference of resource definition
 
+This section explains how to define a resource, its fields and its links. See
+`BaseResource.jsonapi_dict()` for a documentation on exporting objects into
+JSON:API format.
+
 ## Fields
 
 ### Attributes
@@ -135,9 +139,10 @@ class AbstractResource(BaseResource):
 ```
 
 A concrete resource definition without `"id"` member will raise an `AttributeError`.
-When a resource subclasses another resource, all fields are copied to the sub-resource.
+When a resource subclasses another resource, all fields are copied to the sub-resource,
+but the `Meta` inner class is not inherited, so a resource is concrete by default.
 
-## Special class attributes
+## Accessing configuration and meta information about resources
 
 These resource classes are used in the following examples.
 
@@ -157,7 +162,7 @@ class BResource(BaseResource):
             "related__self": lambda x: f"/b/{x}/relationships/related"}
 ```
 
-### Accessing resource metadata
+### Basic information about fields
 
 Some metadata about a resource can be accessed through top level functions applied on
 a resource class:
@@ -176,7 +181,25 @@ See the `jsonapy.functions` module for more information about these functions
 and refer to the following sections to know more about special metadata class
 attributes.
 
-### Configuration attributes defined in the `Meta` inner class
+### Atomic and relationships fields
+
+When a field is a instance of `BaseResource`, it is considered as a
+relationship field. The other fields are considered as "atomic": the `id` used
+for identification, and the attributes that are exported in the `"attributes"`
+object.
+
+Some special attributes provide the sets of atomic and relationships fields names.
+
+```python
+BResource.__fields_types__
+# {'id': int, 'name': str, 'related': __main__.AResource}
+BResource.__atomic_fields_set__
+# {'id', 'name'}
+BResource.__relationships_fields_set__
+# {'related'}
+```
+
+### Configuration special attributes
 
 Summary of attributes which can be defined in the `Meta` inner class:
 
@@ -193,24 +216,33 @@ Summary of attributes which can be defined in the `Meta` inner class:
 During runtime, these metadata can be accessed with special attributes directly
 on the resource classes. For example, the value of `is_abstract` is available
 on the `__is_abstract__` attribute. The `Meta` inner class is not accessible
-during runtime.
+during runtime. See the `BaseResourceMeta` metaclass for more information about
+these attributes initialization.
 
-### Atomic and relationships fields
+## Creating a resource class dynamically
 
-When a field is a instance of `BaseResource`, it is considered as a
-relationship field. The other fields are considered as "atomic": the `id` used
-for identification, and the attributes that are exported in the `"attributes"`
-object.
+This module provides a `create_resource()` functions for creating resources
+classes at runtime. We can recreate `BResource`:
 
-Some special attributes provide the sets of atomic and relationships fields names.
+```python
+BResource = create_resource(
+    "BResource",
+    {"links_factories":
+     {"self": lambda x: f"/b/{x}",
+      "related__self": lambda x: f"/b/{x}/relationships/related"}},
+    id=int,
+    name=str,
+    related=AResource)
 
-```pycon
->>> BResource.__fields_types__
-{'id': int, 'name': str, 'related': __main__.AResource}
->>> BResource.__atomic_fields_set__
-{'id', 'name'}
->>> BResource.__relationships_fields_set__
-{'related'}
+attributes_names(BResource)
+# {'name'}
+relationships_names(BResource)
+# {'related'}
+fields_types(BResource)
+# {'id': int, 'name': str, 'related': __main__.AResource}
+BResource.__links_factories__
+# {'self': <function __main__.<lambda>(x)>,
+#  'related__self': <function __main__.<lambda>(x)>}
 ```
 """
 
@@ -235,10 +267,13 @@ from jsonapy import utils
 
 __all__ = ("BaseResource", "create_resource", "BaseResourceMeta")
 
-IdType = TypeVar("IdType")
-
 
 def _validate_link_name(klass, name):
+    """Check if the link name is consistent with the resource class.
+
+    If the link name is a relationship-qualified name, check if the
+    relationship exists. Else raise a `ValueError`.
+    """
     split_name = name.split("__")
     if len(split_name) > 1:
         relationship_name = split_name[0]
@@ -353,18 +388,18 @@ class BaseResource(metaclass=BaseResourceMeta):
         __resource_name__: str
         __is_abstract__: bool
         __identifier_meta_attributes__: Set[str]
-        __links_factories__: Dict[str, Callable[[IdType], str]]
+        __links_factories__: Dict[str, Callable[..., str]]
         _identifier_fields: Set[str]
         _forbidden_fields: Set[str]
 
         # must be provided by subclasses
-        id: IdType
+        id: Any
 
     class Meta:
         is_abstract: bool = True
         resource_name: str
         identifier_meta_attributes: Set[str]
-        links_factories: Dict[str, Callable[[IdType], str]]
+        links_factories: Dict[str, Callable[..., str]]
 
     def __init__(self, **kwargs):
         """Automatically set all passed arguments.
@@ -514,7 +549,7 @@ class BaseResource(metaclass=BaseResourceMeta):
         )
 
     @classmethod
-    def register_link_factory(cls, name: str, factory: Callable[[IdType], str]):
+    def register_link_factory(cls, name: str, factory: Callable[..., str]):
         """Add a link factory to the resource.
 
         When the resources are dump, these factories are used to produce their
@@ -678,26 +713,6 @@ class BaseResource(metaclass=BaseResourceMeta):
                 )
         return relationships_dict
 
-    # def _relationship_dict(
-    #     self,
-    #     related_object: "BaseResource",
-    #     data_is_required: bool,
-    #     relationship_links: Set[str],
-    #     relationship_name
-    # ):
-    #     """Make a single relationship object.
-    #
-    #     Return a relationship object containing:
-    #     - data if needed
-    #     - links if needed
-    #     """
-    #     rel_data = {}
-    #     if data_is_required:
-    #         rel_data["data"] = related_object._identifier_dict
-    #     if relationship_links:
-    #         rel_data["links"] = self._make_links(relationship_links, relationship=relationship_name)
-    #     return rel_data
-
     def _make_links(self,
                     links: Mapping[str, Union[str, Dict[str, Any]]],
                     relationship: Optional[str] = None):
@@ -734,8 +749,8 @@ class BaseResource(metaclass=BaseResourceMeta):
 
 def create_resource(
     name: str,
-    meta_conf: Dict[str, Any],
-    bases: Tuple[type] = (),
+    meta_conf: Optional[Dict[str, Any]] = None,
+    bases: Tuple[type] = (BaseResource,),
     metaklass: type = BaseResourceMeta,
     /,
     **fields_types
@@ -744,12 +759,18 @@ def create_resource(
 
     ###### Parameters ######
 
+    Positional:
+
     * `name`: The resource class name.
     * `meta_conf`: A dictionary containg configuration attributes (of the
       `Meta` inner class).
-    * `bases`: A tuple containing parent classes.
+    * `bases`: A tuple containing parent classes. It must contain include
+      `BaseResource`.
     * `metaklass`: The metaclass used to create the resource class (must
       be a subclass of `BaseResourceMeta`).
+
+    Keywords:
+
     * `**fields_types`: The types of the fields as keyword arguments.
 
     ###### Returned value ######
@@ -759,12 +780,17 @@ def create_resource(
     ###### Errors raised ######
 
     A `TypeError` is raised if `metaklass` is not a subclass of `BaseResourceMeta`.
+    A `ValueError` is raised if `BaseResource` is not in `bases` argument.
     """
     if not issubclass(metaklass, BaseResourceMeta):
         raise TypeError(
             "Only a submetaclass of BaseResourceMeta can create a new "
             f"resource class. ('{metaklass}' provided.)")
+    if BaseResource not in bases:
+        raise ValueError(
+            "'BaseResource' class must be a parent class of any resource "
+            "class.")
 
-    meta_inncer_class = type("Meta", (), meta_conf)
+    meta_inncer_class = type("Meta", (), meta_conf or {})
     namespace = {"__annotations__": fields_types, "Meta": meta_inncer_class}
     return metaklass(name, bases, namespace)
