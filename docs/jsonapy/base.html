@@ -35,12 +35,13 @@
     </ul></li>
     <li><a href="#link-registering">Link registering</a></li>
     <li><a href="#abstract-resource-and-inheritance">Abstract resource and inheritance</a></li>
-    <li><a href="#special-class-attributes">Special class attributes</a>
+    <li><a href="#accessing-configuration-and-meta-information-about-resources">Accessing configuration and meta information about resources</a>
     <ul>
-      <li><a href="#accessing-resource-metadata">Accessing resource metadata</a></li>
-      <li><a href="#configuration-attributes-defined-in-the-meta-inner-class">Configuration attributes defined in the <code>Meta</code> inner class</a></li>
+      <li><a href="#basic-information-about-fields">Basic information about fields</a></li>
       <li><a href="#atomic-and-relationships-fields">Atomic and relationships fields</a></li>
+      <li><a href="#configuration-special-attributes">Configuration special attributes</a></li>
     </ul></li>
+    <li><a href="#creating-a-resource-class-dynamically">Creating a resource class dynamically</a></li>
   </ul></li>
 </ul>
 
@@ -92,6 +93,10 @@
 <a href="./../jsonapy.html">jsonapy</a>.base    </h1>
 
                         <div class="docstring"><h1 id="complete-reference-of-resource-definition">Complete reference of resource definition</h1>
+
+<p>This section explains how to define a resource, its fields and its links. See
+<code><a href="#BaseResource.jsonapi_dict">BaseResource.jsonapi_dict()</a></code> for a documentation on exporting objects into
+JSON:API format.</p>
 
 <h2 id="fields">Fields</h2>
 
@@ -228,9 +233,10 @@ that a resource is abstract with the <code>Meta</code> innerclass:</p>
 </code></pre></div>
 
 <p>A concrete resource definition without <code>"id"</code> member will raise an <code>AttributeError</code>.
-When a resource subclasses another resource, all fields are copied to the sub-resource.</p>
+When a resource subclasses another resource, all fields are copied to the sub-resource,
+but the <code>Meta</code> inner class is not inherited, so a resource is concrete by default.</p>
 
-<h2 id="special-class-attributes">Special class attributes</h2>
+<h2 id="accessing-configuration-and-meta-information-about-resources">Accessing configuration and meta information about resources</h2>
 
 <p>These resource classes are used in the following examples.</p>
 
@@ -249,7 +255,7 @@ When a resource subclasses another resource, all fields are copied to the sub-re
             <span class="s2">&quot;related__self&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;/b/</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">/relationships/related&quot;</span><span class="p">}</span>
 </code></pre></div>
 
-<h3 id="accessing-resource-metadata">Accessing resource metadata</h3>
+<h3 id="basic-information-about-fields">Basic information about fields</h3>
 
 <p>Some metadata about a resource can be accessed through top level functions applied on
 a resource class:</p>
@@ -267,7 +273,24 @@ a resource class:</p>
 and refer to the following sections to know more about special metadata class
 attributes.</p>
 
-<h3 id="configuration-attributes-defined-in-the-meta-inner-class">Configuration attributes defined in the <code>Meta</code> inner class</h3>
+<h3 id="atomic-and-relationships-fields">Atomic and relationships fields</h3>
+
+<p>When a field is a instance of <code><a href="#BaseResource">BaseResource</a></code>, it is considered as a
+relationship field. The other fields are considered as "atomic": the <code>id</code> used
+for identification, and the attributes that are exported in the <code>"attributes"</code>
+object.</p>
+
+<p>Some special attributes provide the sets of atomic and relationships fields names.</p>
+
+<div class="codehilite"><pre><span></span><code><span class="n">BResource</span><span class="o">.</span><span class="n">__fields_types__</span>
+<span class="c1"># {&#39;id&#39;: int, &#39;name&#39;: str, &#39;related&#39;: __main__.AResource}</span>
+<span class="n">BResource</span><span class="o">.</span><span class="n">__atomic_fields_set__</span>
+<span class="c1"># {&#39;id&#39;, &#39;name&#39;}</span>
+<span class="n">BResource</span><span class="o">.</span><span class="n">__relationships_fields_set__</span>
+<span class="c1"># {&#39;related&#39;}</span>
+</code></pre></div>
+
+<h3 id="configuration-special-attributes">Configuration special attributes</h3>
 
 <p>Summary of attributes which can be defined in the <code>Meta</code> inner class:</p>
 
@@ -286,23 +309,32 @@ the links and the values their factories functions.</li>
 <p>During runtime, these metadata can be accessed with special attributes directly
 on the resource classes. For example, the value of <code>is_abstract</code> is available
 on the <code>__is_abstract__</code> attribute. The <code>Meta</code> inner class is not accessible
-during runtime.</p>
+during runtime. See the <code><a href="#BaseResourceMeta">BaseResourceMeta</a></code> metaclass for more information about
+these attributes initialization.</p>
 
-<h3 id="atomic-and-relationships-fields">Atomic and relationships fields</h3>
+<h2 id="creating-a-resource-class-dynamically">Creating a resource class dynamically</h2>
 
-<p>When a field is a instance of <code><a href="#BaseResource">BaseResource</a></code>, it is considered as a
-relationship field. The other fields are considered as "atomic": the <code>id</code> used
-for identification, and the attributes that are exported in the <code>"attributes"</code>
-object.</p>
+<p>This module provides a <code><a href="#create_resource">create_resource()</a></code> functions for creating resources
+classes at runtime. We can recreate <code>BResource</code>:</p>
 
-<p>Some special attributes provide the sets of atomic and relationships fields names.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">BResource</span> <span class="o">=</span> <span class="n">create_resource</span><span class="p">(</span>
+    <span class="s2">&quot;BResource&quot;</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;links_factories&quot;</span><span class="p">:</span>
+     <span class="p">{</span><span class="s2">&quot;self&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;/b/</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;related__self&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;/b/</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">/relationships/related&quot;</span><span class="p">}},</span>
+    <span class="nb">id</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+    <span class="n">related</span><span class="o">=</span><span class="n">AResource</span><span class="p">)</span>
 
-<div class="codehilite"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">BResource</span><span class="o">.</span><span class="n">__fields_types__</span>
-<span class="go">{&#39;id&#39;: int, &#39;name&#39;: str, &#39;related&#39;: __main__.AResource}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">BResource</span><span class="o">.</span><span class="n">__atomic_fields_set__</span>
-<span class="go">{&#39;id&#39;, &#39;name&#39;}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">BResource</span><span class="o">.</span><span class="n">__relationships_fields_set__</span>
-<span class="go">{&#39;related&#39;}</span>
+<span class="n">attributes_names</span><span class="p">(</span><span class="n">BResource</span><span class="p">)</span>
+<span class="c1"># {&#39;name&#39;}</span>
+<span class="n">relationships_names</span><span class="p">(</span><span class="n">BResource</span><span class="p">)</span>
+<span class="c1"># {&#39;related&#39;}</span>
+<span class="n">fields_types</span><span class="p">(</span><span class="n">BResource</span><span class="p">)</span>
+<span class="c1"># {&#39;id&#39;: int, &#39;name&#39;: str, &#39;related&#39;: __main__.AResource}</span>
+<span class="n">BResource</span><span class="o">.</span><span class="n">__links_factories__</span>
+<span class="c1"># {&#39;self&#39;: &lt;function __main__.&lt;lambda&gt;(x)&gt;,</span>
+<span class="c1">#  &#39;related__self&#39;: &lt;function __main__.&lt;lambda&gt;(x)&gt;}</span>
 </code></pre></div>
 </div>
 
@@ -313,6 +345,10 @@ object.</p>
 <span class="c1"># For a complete copy of the license, see the LICENSE file.</span>
 
 <span class="sd">&quot;&quot;&quot; # Complete reference of resource definition</span>
+
+<span class="sd">This section explains how to define a resource, its fields and its links. See</span>
+<span class="sd">`BaseResource.jsonapi_dict()` for a documentation on exporting objects into</span>
+<span class="sd">JSON:API format.</span>
 
 <span class="sd">## Fields</span>
 
@@ -445,9 +481,10 @@ object.</p>
 <span class="sd">```</span>
 
 <span class="sd">A concrete resource definition without `&quot;id&quot;` member will raise an `AttributeError`.</span>
-<span class="sd">When a resource subclasses another resource, all fields are copied to the sub-resource.</span>
+<span class="sd">When a resource subclasses another resource, all fields are copied to the sub-resource,</span>
+<span class="sd">but the `Meta` inner class is not inherited, so a resource is concrete by default.</span>
 
-<span class="sd">## Special class attributes</span>
+<span class="sd">## Accessing configuration and meta information about resources</span>
 
 <span class="sd">These resource classes are used in the following examples.</span>
 
@@ -467,7 +504,7 @@ object.</p>
 <span class="sd">            &quot;related__self&quot;: lambda x: f&quot;/b/{x}/relationships/related&quot;}</span>
 <span class="sd">```</span>
 
-<span class="sd">### Accessing resource metadata</span>
+<span class="sd">### Basic information about fields</span>
 
 <span class="sd">Some metadata about a resource can be accessed through top level functions applied on</span>
 <span class="sd">a resource class:</span>
@@ -486,7 +523,25 @@ object.</p>
 <span class="sd">and refer to the following sections to know more about special metadata class</span>
 <span class="sd">attributes.</span>
 
-<span class="sd">### Configuration attributes defined in the `Meta` inner class</span>
+<span class="sd">### Atomic and relationships fields</span>
+
+<span class="sd">When a field is a instance of `BaseResource`, it is considered as a</span>
+<span class="sd">relationship field. The other fields are considered as &quot;atomic&quot;: the `id` used</span>
+<span class="sd">for identification, and the attributes that are exported in the `&quot;attributes&quot;`</span>
+<span class="sd">object.</span>
+
+<span class="sd">Some special attributes provide the sets of atomic and relationships fields names.</span>
+
+<span class="sd">```python</span>
+<span class="sd">BResource.__fields_types__</span>
+<span class="sd"># {&#39;id&#39;: int, &#39;name&#39;: str, &#39;related&#39;: __main__.AResource}</span>
+<span class="sd">BResource.__atomic_fields_set__</span>
+<span class="sd"># {&#39;id&#39;, &#39;name&#39;}</span>
+<span class="sd">BResource.__relationships_fields_set__</span>
+<span class="sd"># {&#39;related&#39;}</span>
+<span class="sd">```</span>
+
+<span class="sd">### Configuration special attributes</span>
 
 <span class="sd">Summary of attributes which can be defined in the `Meta` inner class:</span>
 
@@ -503,24 +558,33 @@ object.</p>
 <span class="sd">During runtime, these metadata can be accessed with special attributes directly</span>
 <span class="sd">on the resource classes. For example, the value of `is_abstract` is available</span>
 <span class="sd">on the `__is_abstract__` attribute. The `Meta` inner class is not accessible</span>
-<span class="sd">during runtime.</span>
+<span class="sd">during runtime. See the `BaseResourceMeta` metaclass for more information about</span>
+<span class="sd">these attributes initialization.</span>
 
-<span class="sd">### Atomic and relationships fields</span>
+<span class="sd">## Creating a resource class dynamically</span>
 
-<span class="sd">When a field is a instance of `BaseResource`, it is considered as a</span>
-<span class="sd">relationship field. The other fields are considered as &quot;atomic&quot;: the `id` used</span>
-<span class="sd">for identification, and the attributes that are exported in the `&quot;attributes&quot;`</span>
-<span class="sd">object.</span>
+<span class="sd">This module provides a `create_resource()` functions for creating resources</span>
+<span class="sd">classes at runtime. We can recreate `BResource`:</span>
 
-<span class="sd">Some special attributes provide the sets of atomic and relationships fields names.</span>
+<span class="sd">```python</span>
+<span class="sd">BResource = create_resource(</span>
+<span class="sd">    &quot;BResource&quot;,</span>
+<span class="sd">    {&quot;links_factories&quot;:</span>
+<span class="sd">     {&quot;self&quot;: lambda x: f&quot;/b/{x}&quot;,</span>
+<span class="sd">      &quot;related__self&quot;: lambda x: f&quot;/b/{x}/relationships/related&quot;}},</span>
+<span class="sd">    id=int,</span>
+<span class="sd">    name=str,</span>
+<span class="sd">    related=AResource)</span>
 
-<span class="sd">```pycon</span>
-<span class="sd">&gt;&gt;&gt; BResource.__fields_types__</span>
-<span class="sd">{&#39;id&#39;: int, &#39;name&#39;: str, &#39;related&#39;: __main__.AResource}</span>
-<span class="sd">&gt;&gt;&gt; BResource.__atomic_fields_set__</span>
-<span class="sd">{&#39;id&#39;, &#39;name&#39;}</span>
-<span class="sd">&gt;&gt;&gt; BResource.__relationships_fields_set__</span>
-<span class="sd">{&#39;related&#39;}</span>
+<span class="sd">attributes_names(BResource)</span>
+<span class="sd"># {&#39;name&#39;}</span>
+<span class="sd">relationships_names(BResource)</span>
+<span class="sd"># {&#39;related&#39;}</span>
+<span class="sd">fields_types(BResource)</span>
+<span class="sd"># {&#39;id&#39;: int, &#39;name&#39;: str, &#39;related&#39;: __main__.AResource}</span>
+<span class="sd">BResource.__links_factories__</span>
+<span class="sd"># {&#39;self&#39;: &lt;function __main__.&lt;lambda&gt;(x)&gt;,</span>
+<span class="sd">#  &#39;related__self&#39;: &lt;function __main__.&lt;lambda&gt;(x)&gt;}</span>
 <span class="sd">```</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
@@ -545,10 +609,13 @@ object.</p>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;BaseResource&quot;</span><span class="p">,</span> <span class="s2">&quot;create_resource&quot;</span><span class="p">,</span> <span class="s2">&quot;BaseResourceMeta&quot;</span><span class="p">)</span>
 
-<span class="n">IdType</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;IdType&quot;</span><span class="p">)</span>
-
 
 <span class="k">def</span> <span class="nf">_validate_link_name</span><span class="p">(</span><span class="n">klass</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Check if the link name is consistent with the resource class.</span>
+
+<span class="sd">    If the link name is a relationship-qualified name, check if the</span>
+<span class="sd">    relationship exists. Else raise a `ValueError`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">split_name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">split_name</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
         <span class="n">relationship_name</span> <span class="o">=</span> <span class="n">split_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -663,18 +730,18 @@ object.</p>
         <span class="n">__resource_name__</span><span class="p">:</span> <span class="nb">str</span>
         <span class="n">__is_abstract__</span><span class="p">:</span> <span class="nb">bool</span>
         <span class="n">__identifier_meta_attributes__</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-        <span class="n">__links_factories__</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IdType</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span>
+        <span class="n">__links_factories__</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span>
         <span class="n">_identifier_fields</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
         <span class="n">_forbidden_fields</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
 
         <span class="c1"># must be provided by subclasses</span>
-        <span class="nb">id</span><span class="p">:</span> <span class="n">IdType</span>
+        <span class="nb">id</span><span class="p">:</span> <span class="n">Any</span>
 
     <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
         <span class="n">is_abstract</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="n">resource_name</span><span class="p">:</span> <span class="nb">str</span>
         <span class="n">identifier_meta_attributes</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-        <span class="n">links_factories</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IdType</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span>
+        <span class="n">links_factories</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Automatically set all passed arguments.</span>
@@ -824,7 +891,7 @@ object.</p>
         <span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">register_link_factory</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IdType</span><span class="p">],</span> <span class="nb">str</span><span class="p">]):</span>
+    <span class="k">def</span> <span class="nf">register_link_factory</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">str</span><span class="p">]):</span>
         <span class="sd">&quot;&quot;&quot;Add a link factory to the resource.</span>
 
 <span class="sd">        When the resources are dump, these factories are used to produce their</span>
@@ -987,26 +1054,6 @@ object.</p>
                     <span class="k">else</span> <span class="n">rel_value</span><span class="o">.</span><span class="n">_identifier_dict</span>
                 <span class="p">)</span>
         <span class="k">return</span> <span class="n">relationships_dict</span>
-
-    <span class="c1"># def _relationship_dict(</span>
-    <span class="c1">#     self,</span>
-    <span class="c1">#     related_object: &quot;BaseResource&quot;,</span>
-    <span class="c1">#     data_is_required: bool,</span>
-    <span class="c1">#     relationship_links: Set[str],</span>
-    <span class="c1">#     relationship_name</span>
-    <span class="c1"># ):</span>
-    <span class="c1">#     &quot;&quot;&quot;Make a single relationship object.</span>
-    <span class="c1">#</span>
-    <span class="c1">#     Return a relationship object containing:</span>
-    <span class="c1">#     - data if needed</span>
-    <span class="c1">#     - links if needed</span>
-    <span class="c1">#     &quot;&quot;&quot;</span>
-    <span class="c1">#     rel_data = {}</span>
-    <span class="c1">#     if data_is_required:</span>
-    <span class="c1">#         rel_data[&quot;data&quot;] = related_object._identifier_dict</span>
-    <span class="c1">#     if relationship_links:</span>
-    <span class="c1">#         rel_data[&quot;links&quot;] = self._make_links(relationship_links, relationship=relationship_name)</span>
-    <span class="c1">#     return rel_data</span>
 
     <span class="k">def</span> <span class="nf">_make_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                     <span class="n">links</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]],</span>
@@ -1044,8 +1091,8 @@ object.</p>
 
 <span class="k">def</span> <span class="nf">create_resource</span><span class="p">(</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">meta_conf</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-    <span class="n">bases</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">type</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">meta_conf</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">bases</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">type</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">BaseResource</span><span class="p">,),</span>
     <span class="n">metaklass</span><span class="p">:</span> <span class="nb">type</span> <span class="o">=</span> <span class="n">BaseResourceMeta</span><span class="p">,</span>
     <span class="o">/</span><span class="p">,</span>
     <span class="o">**</span><span class="n">fields_types</span>
@@ -1054,12 +1101,18 @@ object.</p>
 
 <span class="sd">    ###### Parameters ######</span>
 
+<span class="sd">    Positional:</span>
+
 <span class="sd">    * `name`: The resource class name.</span>
 <span class="sd">    * `meta_conf`: A dictionary containg configuration attributes (of the</span>
 <span class="sd">      `Meta` inner class).</span>
-<span class="sd">    * `bases`: A tuple containing parent classes.</span>
+<span class="sd">    * `bases`: A tuple containing parent classes. It must contain include</span>
+<span class="sd">      `BaseResource`.</span>
 <span class="sd">    * `metaklass`: The metaclass used to create the resource class (must</span>
 <span class="sd">      be a subclass of `BaseResourceMeta`).</span>
+
+<span class="sd">    Keywords:</span>
+
 <span class="sd">    * `**fields_types`: The types of the fields as keyword arguments.</span>
 
 <span class="sd">    ###### Returned value ######</span>
@@ -1069,13 +1122,18 @@ object.</p>
 <span class="sd">    ###### Errors raised ######</span>
 
 <span class="sd">    A `TypeError` is raised if `metaklass` is not a subclass of `BaseResourceMeta`.</span>
+<span class="sd">    A `ValueError` is raised if `BaseResource` is not in `bases` argument.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">metaklass</span><span class="p">,</span> <span class="n">BaseResourceMeta</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
             <span class="s2">&quot;Only a submetaclass of BaseResourceMeta can create a new &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;resource class. (&#39;</span><span class="si">{</span><span class="n">metaklass</span><span class="si">}</span><span class="s2">&#39; provided.)&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">BaseResource</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">bases</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;&#39;BaseResource&#39; class must be a parent class of any resource &quot;</span>
+            <span class="s2">&quot;class.&quot;</span><span class="p">)</span>
 
-    <span class="n">meta_inncer_class</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="s2">&quot;Meta&quot;</span><span class="p">,</span> <span class="p">(),</span> <span class="n">meta_conf</span><span class="p">)</span>
+    <span class="n">meta_inncer_class</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="s2">&quot;Meta&quot;</span><span class="p">,</span> <span class="p">(),</span> <span class="n">meta_conf</span> <span class="ow">or</span> <span class="p">{})</span>
     <span class="n">namespace</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;__annotations__&quot;</span><span class="p">:</span> <span class="n">fields_types</span><span class="p">,</span> <span class="s2">&quot;Meta&quot;</span><span class="p">:</span> <span class="n">meta_inncer_class</span><span class="p">}</span>
     <span class="k">return</span> <span class="n">metaklass</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">namespace</span><span class="p">)</span>
 </pre></div>
@@ -1111,18 +1169,18 @@ object.</p>
         <span class="n">__resource_name__</span><span class="p">:</span> <span class="nb">str</span>
         <span class="n">__is_abstract__</span><span class="p">:</span> <span class="nb">bool</span>
         <span class="n">__identifier_meta_attributes__</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-        <span class="n">__links_factories__</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IdType</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span>
+        <span class="n">__links_factories__</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span>
         <span class="n">_identifier_fields</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
         <span class="n">_forbidden_fields</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
 
         <span class="c1"># must be provided by subclasses</span>
-        <span class="nb">id</span><span class="p">:</span> <span class="n">IdType</span>
+        <span class="nb">id</span><span class="p">:</span> <span class="n">Any</span>
 
     <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
         <span class="n">is_abstract</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="n">resource_name</span><span class="p">:</span> <span class="nb">str</span>
         <span class="n">identifier_meta_attributes</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-        <span class="n">links_factories</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IdType</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span>
+        <span class="n">links_factories</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Automatically set all passed arguments.</span>
@@ -1272,7 +1330,7 @@ object.</p>
         <span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">register_link_factory</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IdType</span><span class="p">],</span> <span class="nb">str</span><span class="p">]):</span>
+    <span class="k">def</span> <span class="nf">register_link_factory</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">str</span><span class="p">]):</span>
         <span class="sd">&quot;&quot;&quot;Add a link factory to the resource.</span>
 
 <span class="sd">        When the resources are dump, these factories are used to produce their</span>
@@ -1435,26 +1493,6 @@ object.</p>
                     <span class="k">else</span> <span class="n">rel_value</span><span class="o">.</span><span class="n">_identifier_dict</span>
                 <span class="p">)</span>
         <span class="k">return</span> <span class="n">relationships_dict</span>
-
-    <span class="c1"># def _relationship_dict(</span>
-    <span class="c1">#     self,</span>
-    <span class="c1">#     related_object: &quot;BaseResource&quot;,</span>
-    <span class="c1">#     data_is_required: bool,</span>
-    <span class="c1">#     relationship_links: Set[str],</span>
-    <span class="c1">#     relationship_name</span>
-    <span class="c1"># ):</span>
-    <span class="c1">#     &quot;&quot;&quot;Make a single relationship object.</span>
-    <span class="c1">#</span>
-    <span class="c1">#     Return a relationship object containing:</span>
-    <span class="c1">#     - data if needed</span>
-    <span class="c1">#     - links if needed</span>
-    <span class="c1">#     &quot;&quot;&quot;</span>
-    <span class="c1">#     rel_data = {}</span>
-    <span class="c1">#     if data_is_required:</span>
-    <span class="c1">#         rel_data[&quot;data&quot;] = related_object._identifier_dict</span>
-    <span class="c1">#     if relationship_links:</span>
-    <span class="c1">#         rel_data[&quot;links&quot;] = self._make_links(relationship_links, relationship=relationship_name)</span>
-    <span class="c1">#     return rel_data</span>
 
     <span class="k">def</span> <span class="nf">_make_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                     <span class="n">links</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]],</span>
@@ -1808,13 +1846,13 @@ parameters, see <code><a href="#BaseResource.jsonapi_dict">BaseResource.jsonapi_
                 <div class="decorator">@classmethod</div>
 
             <span class="def">def</span>
-            <span class="name">register_link_factory</span><span class="signature">(cls, name: str, factory: Callable[[~IdType], str])</span>:
+            <span class="name">register_link_factory</span><span class="signature">(cls, name: str, factory: Callable[..., str])</span>:
     </div>
 
                 <details>
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">register_link_factory</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IdType</span><span class="p">],</span> <span class="nb">str</span><span class="p">]):</span>
+    <span class="k">def</span> <span class="nf">register_link_factory</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">str</span><span class="p">]):</span>
         <span class="sd">&quot;&quot;&quot;Add a link factory to the resource.</span>
 
 <span class="sd">        When the resources are dump, these factories are used to produce their</span>
@@ -1884,8 +1922,8 @@ resource has an <code>"author"</code> relationship attribute, you can register
             <span class="def">def</span>
             <span class="name">create_resource</span><span class="signature">(
     name: str,
-    meta_conf: Dict[str, Any],
-    bases: Tuple[type] = (),
+    meta_conf: Union[Dict[str, Any], NoneType] = None,
+    bases: Tuple[type] = (&lt;class &#39;<a href="#BaseResource">jsonapy.base.BaseResource</a>&#39;&gt;,),
     metaklass: type = &lt;class &#39;<a href="#BaseResourceMeta">jsonapy.base.BaseResourceMeta</a>&#39;&gt;,
     /,
     **fields_types
@@ -1896,8 +1934,8 @@ resource has an <code>"author"</code> relationship attribute, you can register
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">create_resource</span><span class="p">(</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">meta_conf</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-    <span class="n">bases</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">type</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">meta_conf</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">bases</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">type</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">BaseResource</span><span class="p">,),</span>
     <span class="n">metaklass</span><span class="p">:</span> <span class="nb">type</span> <span class="o">=</span> <span class="n">BaseResourceMeta</span><span class="p">,</span>
     <span class="o">/</span><span class="p">,</span>
     <span class="o">**</span><span class="n">fields_types</span>
@@ -1906,12 +1944,18 @@ resource has an <code>"author"</code> relationship attribute, you can register
 
 <span class="sd">    ###### Parameters ######</span>
 
+<span class="sd">    Positional:</span>
+
 <span class="sd">    * `name`: The resource class name.</span>
 <span class="sd">    * `meta_conf`: A dictionary containg configuration attributes (of the</span>
 <span class="sd">      `Meta` inner class).</span>
-<span class="sd">    * `bases`: A tuple containing parent classes.</span>
+<span class="sd">    * `bases`: A tuple containing parent classes. It must contain include</span>
+<span class="sd">      `BaseResource`.</span>
 <span class="sd">    * `metaklass`: The metaclass used to create the resource class (must</span>
 <span class="sd">      be a subclass of `BaseResourceMeta`).</span>
+
+<span class="sd">    Keywords:</span>
+
 <span class="sd">    * `**fields_types`: The types of the fields as keyword arguments.</span>
 
 <span class="sd">    ###### Returned value ######</span>
@@ -1921,13 +1965,18 @@ resource has an <code>"author"</code> relationship attribute, you can register
 <span class="sd">    ###### Errors raised ######</span>
 
 <span class="sd">    A `TypeError` is raised if `metaklass` is not a subclass of `BaseResourceMeta`.</span>
+<span class="sd">    A `ValueError` is raised if `BaseResource` is not in `bases` argument.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">metaklass</span><span class="p">,</span> <span class="n">BaseResourceMeta</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
             <span class="s2">&quot;Only a submetaclass of BaseResourceMeta can create a new &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;resource class. (&#39;</span><span class="si">{</span><span class="n">metaklass</span><span class="si">}</span><span class="s2">&#39; provided.)&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">BaseResource</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">bases</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;&#39;BaseResource&#39; class must be a parent class of any resource &quot;</span>
+            <span class="s2">&quot;class.&quot;</span><span class="p">)</span>
 
-    <span class="n">meta_inncer_class</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="s2">&quot;Meta&quot;</span><span class="p">,</span> <span class="p">(),</span> <span class="n">meta_conf</span><span class="p">)</span>
+    <span class="n">meta_inncer_class</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="s2">&quot;Meta&quot;</span><span class="p">,</span> <span class="p">(),</span> <span class="n">meta_conf</span> <span class="ow">or</span> <span class="p">{})</span>
     <span class="n">namespace</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;__annotations__&quot;</span><span class="p">:</span> <span class="n">fields_types</span><span class="p">,</span> <span class="s2">&quot;Meta&quot;</span><span class="p">:</span> <span class="n">meta_inncer_class</span><span class="p">}</span>
     <span class="k">return</span> <span class="n">metaklass</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">namespace</span><span class="p">)</span>
 </pre></div>
@@ -1938,13 +1987,21 @@ resource has an <code>"author"</code> relationship attribute, you can register
 
 <h6 id="parameters">Parameters</h6>
 
+<p>Positional:</p>
+
 <ul>
 <li><code>name</code>: The resource class name.</li>
 <li><code>meta_conf</code>: A dictionary containg configuration attributes (of the
 <code>Meta</code> inner class).</li>
-<li><code>bases</code>: A tuple containing parent classes.</li>
+<li><code>bases</code>: A tuple containing parent classes. It must contain include
+<code><a href="#BaseResource">BaseResource</a></code>.</li>
 <li><code>metaklass</code>: The metaclass used to create the resource class (must
 be a subclass of <code><a href="#BaseResourceMeta">BaseResourceMeta</a></code>).</li>
+</ul>
+
+<p>Keywords:</p>
+
+<ul>
 <li><code>**fields_types</code>: The types of the fields as keyword arguments.</li>
 </ul>
 
@@ -1954,7 +2011,8 @@ be a subclass of <code><a href="#BaseResourceMeta">BaseResourceMeta</a></code>).
 
 <h6 id="errors-raised">Errors raised</h6>
 
-<p>A <code>TypeError</code> is raised if <code>metaklass</code> is not a subclass of <code><a href="#BaseResourceMeta">BaseResourceMeta</a></code>.</p>
+<p>A <code>TypeError</code> is raised if <code>metaklass</code> is not a subclass of <code><a href="#BaseResourceMeta">BaseResourceMeta</a></code>.
+A <code>ValueError</code> is raised if <code><a href="#BaseResource">BaseResource</a></code> is not in <code>bases</code> argument.</p>
 </div>
 
 
