@@ -426,6 +426,7 @@ class BaseResource(metaclass=BaseResourceMeta):
         required_attributes: Union[Iterable[str], Literal["__all__"]],
         links: Optional[Mapping[str, Union[str, Mapping[str, Any]]]] = None,
         relationships: Optional[Dict] = None,
+        dontformat: bool = False
     ) -> Dict:
         """Export the object as a dictionary in compliance with JSON:API specification.
 
@@ -445,6 +446,8 @@ class BaseResource(metaclass=BaseResourceMeta):
           + `"data"`: a boolean indicating if an identifier object must be included.
             If there is identifier meta attributes, they are also exported.
           + `"links"`: a dictionary in the same shape as the `links` argument.
+        - `dontformat`: if `True`, do not format automatically fields names to
+          camelCase. Default: `False`.
 
         ###### Returned value ######
 
@@ -506,7 +509,8 @@ class BaseResource(metaclass=BaseResourceMeta):
             "type": self.__resource_name__,
             "id": self.id,
         }
-        filtered_attributes, meta_attributes = self._filtered_attributes(required_attributes)
+        filtered_attributes, meta_attributes = self._filtered_attributes(
+            required_attributes, dontformat)
         if filtered_attributes:
             data["attributes"] = filtered_attributes
         if relationships:
@@ -656,7 +660,7 @@ class BaseResource(metaclass=BaseResourceMeta):
     ###########################################################################
 
     def _filtered_attributes(
-        self, required_attributes: Union[Iterable, Literal["__all__"]]
+        self, required_attributes: Union[Iterable, Literal["__all__"]], dontformat=False
     ) -> Tuple[Dict, Dict]:
         """Filter the attributes with provided `required_attributes` iterable.
 
@@ -678,12 +682,12 @@ class BaseResource(metaclass=BaseResourceMeta):
         if errors:
             raise ValueError("\n" + "\n".join(errors))
         attrs = {
-            utils.snake_to_camel_case(k): v
+            utils.snake_to_camel_case(k, dontformat): v
             for (k, v) in attrs.items()
             if k in set(required_attributes) - self._identifier_fields
         }
         meta_attrs = {
-            utils.snake_to_camel_case(name): getattr(self, name)
+            utils.snake_to_camel_case(name, dontformat): getattr(self, name)
             for name in self.__meta_attributes__
             if getattr(self, name) is not None
         } if "meta" in required_attributes else None
@@ -750,11 +754,11 @@ class BaseResource(metaclass=BaseResourceMeta):
 def create_resource(
     name: str,
     meta_conf: Optional[Dict[str, Any]] = None,
-    bases: Tuple[type] = (BaseResource,),
+    bases: Union[type, Tuple[type]] = BaseResource,
     metaklass: type = BaseResourceMeta,
     /,
     **fields_types
-) -> Type[BaseResource]:
+) -> Any:
     """Create dynamically a new resource class.
 
     ###### Parameters ######
@@ -786,6 +790,8 @@ def create_resource(
         raise TypeError(
             "Only a submetaclass of BaseResourceMeta can create a new "
             f"resource class. ('{metaklass}' provided.)")
+    if isinstance(bases, type):
+        bases = tuple(bases.mro())
     if BaseResource not in bases:
         raise ValueError(
             "'BaseResource' class must be a parent class of any resource "

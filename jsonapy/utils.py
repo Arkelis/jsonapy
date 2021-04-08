@@ -13,11 +13,14 @@ import typing
 from typing import Union
 
 
-def snake_to_camel_case(text: str) -> str:
-    """Convert a snake_case string into camelCase format.
+def snake_to_camel_case(text: str, dontformat: bool = False) -> str:
+    """Convert a snake_case string into camelCase format if needed.
 
     This function doesnt check that passed text is in snake_case.
+    If dontformat is True, return text.
     """
+    if dontformat:
+        return text
     first, *others = text.split("_")
     return first + "".join(map(str.capitalize, others))
 
