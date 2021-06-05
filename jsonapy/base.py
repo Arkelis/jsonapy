@@ -247,6 +247,7 @@ BResource.__links_factories__
 """
 
 import collections.abc
+import copy
 import json
 from typing import Any
 from typing import Callable
@@ -724,11 +725,16 @@ class BaseResource(metaclass=BaseResourceMeta):
 
         The links are assumed to be valid. See _validate_links() for validation
         """
+        evaluated_links = copy.deepcopy(links)
+        for name, link in links.items():
+            for param in link:
+                if callable(link[param]):
+                    evaluated_links[name][param] = link[param](self)
         return {
-            name: self.__links_factories__[self._qualname(name, relationship)](**links[name])
+            name: self.__links_factories__[self._qualname(name, relationship)](**evaluated_links[name])
             if self.__links_factories__.get(self._qualname(name, relationship)) is not None
-            else links[name]
-            for name in links
+            else evaluated_links[name]
+            for name in evaluated_links
         }
 
     ###########################################################################
@@ -793,9 +799,9 @@ def create_resource(
     if isinstance(bases, type):
         bases = tuple(bases.mro())
     if BaseResource not in bases:
-        raise ValueError(
+        raise TypeError(
             "'BaseResource' class must be a parent class of any resource "
-            "class.")
+            f"class. ('{bases}' provided.)")
 
     meta_inncer_class = type("Meta", (), meta_conf or {})
     namespace = {"__annotations__": fields_types, "Meta": meta_inncer_class}

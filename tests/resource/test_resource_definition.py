@@ -9,6 +9,7 @@ from typing import Union
 import pytest
 
 from jsonapy.base import BaseResource
+from jsonapy.base import create_resource
 
 
 def make_link(x):
@@ -162,3 +163,48 @@ def test_invalid_relationship_link_registering():
         AResource.register_link_factory("rel__related", make_link)
 
     assert str(err.value) == "'rel' is not a valid relationship for AResource."
+
+
+def test_dynamic_resource_creation():
+    resource = create_resource(
+        "AResoure",
+        {"resource_name": "aResource"},
+        id=str,
+        first_attribute=str,
+        second_attribute=int)
+
+    assert resource.__resource_name__ == "aResource"
+    assert resource.__atomic_fields_set__ == {"id", "first_attribute", "second_attribute"}
+    assert resource.__relationships_fields_set__ == set()
+
+
+def test_dynamic_invalid_resource_metaclass():
+    with pytest.raises(TypeError) as err:
+
+        resource = create_resource(
+            "AResoure",
+            {"resource_name": "aResource"},
+            (BaseResource,),
+            type,
+            id=str,
+            first_attribute=str,
+            second_attribute=int)
+
+    assert str(err.value) == (f"Only a submetaclass of BaseResourceMeta can "
+                              f"create a new resource class. ('{type}' provided.)")
+
+
+def test_dynamic_invalid_resource_class():
+    with pytest.raises(TypeError) as err:
+
+        resource = create_resource(
+            "AResoure",
+            {"resource_name": "aResource"},
+            (str,),
+            id=str,
+            first_attribute=str,
+            second_attribute=int)
+
+    assert str(err.value) == (f"'BaseResource' class must be a parent class of any resource "
+                              f"class. ('{(str,)}' provided.)")
+

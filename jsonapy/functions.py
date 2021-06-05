@@ -24,7 +24,7 @@ def _check_resource_type(func):
             not isinstance(resource_instance_or_class, BaseResource)
             and not isinstance(resource_instance_or_class, BaseResourceMeta)
         ):
-            raise TypeError(f"'{resource_instance_or_class.__class__.__name__}' object is not a resource object.")
+            raise TypeError(f"'{resource_instance_or_class.__class__}' object is not a resource object.")
         return func(resource_instance_or_class)
     return wrapper
 

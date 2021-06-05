@@ -1,4 +1,5 @@
 import json
+import operator
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -134,6 +135,20 @@ def test_simple_dumping_with_link(simple_object: SimpleResource):
                )
            ) == expected
 
+
+def test_simple_dumping_with_callable_link_arg(simple_object: SimpleResource):
+    expected = {
+        "type": "less",
+        "id": 0,
+        "attributes": {"name": "Simple Name"},
+        "links": {"self": "http://example.com/less/0"},
+    }
+    assert (
+               simple_object.jsonapi_dict(
+                   required_attributes="__all__",
+                   links={"self": {"res_id": operator.attrgetter("id")}},
+               )
+           ) == expected
 
 def test_invalid_link(simple_object: SimpleResource):
     with pytest.raises(ValueError) as err:
