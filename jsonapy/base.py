@@ -410,7 +410,8 @@ class BaseResource(metaclass=BaseResourceMeta):
         """
         errors = []
         for name in kwargs:
-            if (hasattr(self, name) and name not in self.__fields_types__
+            if ((getattr(self, name, None) is not None
+                 and name not in self.__fields_types__)
                     or name in self._forbidden_fields):
                 errors.append(f"    This attribute name is reserved: '{name}'.")
         if errors:
@@ -698,7 +699,7 @@ class BaseResource(metaclass=BaseResourceMeta):
         """Format relationships into the JSON:API format."""
         relationships_dict = {}
         for name, rel_payload in relationships.items():
-            rel_value: Union[Iterable[BaseResource], BaseResource] = self.__dict__[name]
+            rel_value: Union[Iterable[BaseResource], BaseResource] = getattr(self, name)
             multiple_relationship = isinstance(rel_value, collections.abc.Iterable)
             if not rel_value:  # None or empty
                 relationships_dict[name] = [] if multiple_relationship else None
@@ -750,7 +751,7 @@ class BaseResource(metaclass=BaseResourceMeta):
         if name == "id":
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
         type_hint = self.__fields_types__.get(name)
-        if type_hint is None:
+        if type_hint is None and name not in self.__meta_attributes__:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
         if utils.is_an_iterable_type_hint(type_hint):
             return []
