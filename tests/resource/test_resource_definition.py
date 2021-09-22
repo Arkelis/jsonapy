@@ -1,9 +1,7 @@
-from typing import Generic
 from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Tuple
-from typing import TypeVar
 from typing import Union
 
 import pytest
@@ -42,6 +40,29 @@ def test_resource_definition_with_relationships():
         opt_rel: Optional[AResource]
         it_rel: Iterable[AResource]
         opt_it_rel: Optional[Iterable[AResource]]
+
+    assert BResource.__relationships_fields_set__ == {"rel", "opt_rel", "it_rel", "opt_it_rel"}
+    assert BResource.__fields_types__ == {
+        "id": int,
+        "rel": AResource,
+        "opt_rel": Optional[AResource],
+        "it_rel": Iterable[AResource],
+        "opt_it_rel": Optional[Iterable[AResource]],
+    }
+
+
+def test_resource_definition_with_postponed_evaluated_type_hints():
+    class BResource(BaseResource):
+        id: int
+        rel: "AResource"
+        opt_rel: Optional["AResource"]
+        it_rel: Iterable["AResource"]
+        opt_it_rel: Optional[Iterable["AResource"]]
+
+    class AResource(BaseResource):
+        id: int
+
+    BResource.evaluate_forward_refs()
 
     assert BResource.__relationships_fields_set__ == {"rel", "opt_rel", "it_rel", "opt_it_rel"}
     assert BResource.__fields_types__ == {
