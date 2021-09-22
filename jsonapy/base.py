@@ -248,10 +248,12 @@ BResource.__links_factories__
 
 import collections.abc
 import copy
+import inspect
 import json
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import ForwardRef
 from typing import Iterable
 from typing import Literal
 from typing import Mapping
@@ -259,9 +261,9 @@ from typing import Optional
 from typing import Set
 from typing import TYPE_CHECKING
 from typing import Tuple
-from typing import Type
-from typing import TypeVar
 from typing import Union
+from typing import get_args
+from typing import get_type_hints
 
 from jsonapy import utils
 
@@ -280,6 +282,36 @@ def _validate_link_name(klass, name):
         relationship_name = split_name[0]
         if relationship_name not in klass.__relationships_fields_set__:
             raise ValueError(f"'{relationship_name}' is not a valid relationship for {klass.__name__}.")
+
+
+def _make_fields_meta_attributes(cls, forbidden_fields, mcs):
+    frame = inspect.currentframe()
+    try:
+        fields_type_hints = get_type_hints(
+            cls,
+            localns=frame.f_back.f_back.f_locals,
+            globalns=frame.f_back.f_back.f_globals)
+    except NameError:
+        fields_type_hints = {
+            name: type_hint
+            for klass in cls.mro()
+            if isinstance(klass, BaseResourceMeta)
+            for name, type_hint in klass.__annotations__.items()}
+    finally:
+        del frame
+    # members special attributes
+    annotations_items = fields_type_hints.items()
+    cls.__fields_types__ = fields_type_hints
+    cls.__atomic_fields_set__ = {
+        name
+        for name, type_ in annotations_items
+        if not utils.is_type_hint_instance_of(type_, mcs)
+    } - forbidden_fields
+    cls.__relationships_fields_set__ = {
+        name
+        for name, type_ in annotations_items
+        if utils.is_type_hint_instance_of(type_, mcs)}
+    return fields_type_hints
 
 
 class BaseResourceMeta(type):
@@ -329,26 +361,7 @@ class BaseResourceMeta(type):
         # identifier fields, see https://jsonapi.org/format/#document-resource-identifier-objects
         identifier_fields = {"type", "id"}
 
-        cls.__annotations__ = {
-            name: type_
-            for klass in cls.mro()
-            if isinstance(klass, BaseResourceMeta)
-            for (name, type_) in klass.__annotations__.items()
-        }
-
-        # members special attributes
-        annotations_items = cls.__annotations__.items()
-        cls.__fields_types__ = cls.__annotations__
-        cls.__atomic_fields_set__ = {
-            name
-            for name, type_ in annotations_items
-            if not utils.is_type_hint_instance_of(type_, mcs)
-        } - forbidden_fields
-        cls.__relationships_fields_set__ = {
-            name
-            for name, type_ in annotations_items
-            if utils.is_type_hint_instance_of(type_, mcs)
-        }
+        fields_type_hints = _make_fields_meta_attributes(cls, forbidden_fields, mcs)
 
         links_factories = {}
         for name, factory in meta.get("links_factories", {}).items():
@@ -362,7 +375,7 @@ class BaseResourceMeta(type):
         cls.__identifier_meta_attributes__ = set(meta.get("identifier_meta_attributes", set()))
         cls.__meta_attributes__ = set(meta.get("meta_attributes", set()))
 
-        if not cls.__is_abstract__ and "id" not in cls.__annotations__:
+        if not cls.__is_abstract__ and "id" not in fields_type_hints:
             raise AttributeError("A Resource must have an 'id' attribute.")
 
         # utilitarian private attributes
@@ -408,6 +421,9 @@ class BaseResource(metaclass=BaseResourceMeta):
         Take keyword arguments only and raise a `ValueError` if a parameter
         tries to reassign an already defined member (like the `jsonapi_dict()`.
         """
+        for type_hint in self.__fields_types__.values():
+            if type_hint is ForwardRef or ForwardRef in get_args(type_hint):
+                raise Warning("Not all type hints were evaluated.")
         errors = []
         for name in kwargs:
             if ((getattr(self, name, None) is not None
@@ -583,6 +599,19 @@ class BaseResource(metaclass=BaseResourceMeta):
         """
         _validate_link_name(cls, name)
         cls.__links_factories__[name] = factory
+
+    @classmethod
+    def evaluate_forward_refs(cls):
+        """Evaluate forward ref type hints
+
+        When a resource has a relationship to a not-yet defined resource,
+        you must use postponed evaluated type hints:
+
+        To evaluate the type hints, call `BaseResource.evaluate_forward_refs()`
+        when all needed resources are defined.
+        """
+        _make_fields_meta_attributes(
+            cls, cls._forbidden_fields, type(cls))
 
     ###########################################################################
     #                                                                         #
