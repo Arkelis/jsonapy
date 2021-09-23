@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jsonapy"
-version = "0.1.5.dev"
+version = "0.1.5.dev1"
 description = "Library for dumping models into JSON:API"
 authors = ["Guillaume Fayard <guillaume.fayard@pycolore.fr>"]
 license = "MIT"

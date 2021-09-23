@@ -247,7 +247,6 @@ BResource.__links_factories__
 """
 
 import collections.abc
-import copy
 import inspect
 import json
 from typing import Any
@@ -755,14 +754,16 @@ class BaseResource(metaclass=BaseResourceMeta):
 
         The links are assumed to be valid. See _validate_links() for validation
         """
-        evaluated_links = copy.deepcopy(links)
-        for name, link in links.items():
-            for param in link:
-                if callable(link[param]):
-                    evaluated_links[name][param] = link[param](self)
+        evaluated_links = {}
+        for name, link_payload in links.items():
+            evaluated_links[name] = link_payload
+            for param, arg in link_payload.items():
+                evaluated_links[name][param] = (
+                    arg(self) if callable(arg) else arg)
+        links_factories = self.__links_factories__
         return {
-            name: self.__links_factories__[self._qualname(name, relationship)](**evaluated_links[name])
-            if self.__links_factories__.get(self._qualname(name, relationship)) is not None
+            name: links_factories[self._qualname(name, relationship)](**evaluated_links[name])
+            if links_factories.get(self._qualname(name, relationship)) is not None
             else evaluated_links[name]
             for name in evaluated_links
         }
